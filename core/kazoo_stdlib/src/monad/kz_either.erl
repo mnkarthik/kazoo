@@ -11,6 +11,7 @@
 -module(kz_either).
 
 -export([bind/2
+        ,unless/2
         ,left/1, from_left/1
         ,right/1, from_right/1
         ]).
@@ -61,3 +62,11 @@ from_right(Val) -> {'ok', Val}.
 -spec bind(either(L, R), fn_bind(L, R)) -> either(L, R).
 bind({'ok', Val}, Fn) -> Fn(Val);
 bind({'error', _}=Left, _Fn) -> Left.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec unless(either(L, R), fn_bind(L, R)) -> either(L, R).
+unless({'ok', _}=Right, _) -> Right;
+unless({'error', Val}, Fn) -> Fn(Val).
