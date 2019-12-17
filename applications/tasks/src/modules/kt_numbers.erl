@@ -443,7 +443,7 @@ list_number(PN) ->
      ,<<"prepend.number">> => kz_json:get_ne_binary_value(?PREPEND_NUMBER, Prepend)
      ,<<"ringback.early">> => kz_json:get_ne_binary_value(?RINGBACK_EARLY, Ringback)
      ,<<"ringback.transfer">> => kz_json:get_ne_binary_value(?RINGBACK_TRANSFER, Ringback)
-     ,<<"force_outbound">> => kz_term:to_binary(knm_number:force_outbound_feature(PN))
+     ,<<"force_outbound">> => kz_term:to_binary(knm_lib:force_outbound_feature(PN))
      ,<<"failover.e164">> => kz_json:get_ne_binary_value(?FAILOVER_E164, Failover)
      ,<<"failover.sip">> => quote(kz_json:get_ne_binary_value(?FAILOVER_SIP, Failover))
      }.

@@ -343,7 +343,7 @@ load_existing_checks() ->
 
 existing_in_state(PN, 'false') ->
     State = kz_term:to_list(knm_phone_number:state(PN)),
-    Resp = knm_pipe:attempt(fun knm_number:ensure_can_load_to_create/1, [PN]),
+    Resp = knm_pipe:attempt(fun knm_lib:ensure_can_load_to_create/1, [PN]),
     [{lists:flatten(["Ensure number in ", State, " cannot be 'created'"])
      ,?_assertMatch({'error', _}, Resp)
      }
@@ -353,7 +353,7 @@ existing_in_state(PN, 'false') ->
 existing_in_state(PN, 'true') ->
     State = kz_term:to_list(knm_phone_number:state(PN)),
     [{lists:flatten(["Ensure number in ", State, " can be 'created'"])
-     ,?_assert(knm_number:ensure_can_load_to_create(PN))
+     ,?_assert(knm_lib:ensure_can_load_to_create(PN))
      }
     ].
 
@@ -365,7 +365,7 @@ create_available_checks() ->
     ].
 
 create_with_no_auth_by() ->
-    Resp = knm_pipe:attempt(fun knm_number:ensure_can_create/2
+    Resp = knm_pipe:attempt(fun knm_lib:ensure_can_create/2
                            ,[?TEST_CREATE_NUM, []]
                            ),
     [{"Ensure unauthorized error thrown when no auth_by supplied"
@@ -375,7 +375,7 @@ create_with_no_auth_by() ->
     ].
 
 create_with_disallowed_account() ->
-    Resp = knm_pipe:attempt(fun knm_number:ensure_can_create/2
+    Resp = knm_pipe:attempt(fun knm_lib:ensure_can_create/2
                            ,[?TEST_CREATE_NUM
                             ,[{'auth_by', ?RESELLER_ACCOUNT_ID}
                              ,{<<"auth_by_account">>
@@ -391,7 +391,7 @@ create_with_disallowed_account() ->
     ].
 
 create_with_number_porting() ->
-    Resp = knm_pipe:attempt(fun knm_number:ensure_can_create/2
+    Resp = knm_pipe:attempt(fun knm_lib:ensure_can_create/2
                            ,[?TEST_AVAILABLE_NUM %% pretend it is porting
                             ,[{'auth_by', ?RESELLER_ACCOUNT_ID}
                              ,{<<"auth_by_account">>
@@ -432,9 +432,9 @@ validate_errors(JObj, [{V, F, L}|Vs], Tests) ->
 
 create_new_number() ->
     {"Ensure success when auth_by account is allowed to create numbers"
-    ,?_assert(knm_number:ensure_can_create(?TEST_CREATE_NUM
-                                          ,[{'auth_by', ?RESELLER_ACCOUNT_ID}
-                                           ]
-                                          )
+    ,?_assert(knm_lib:ensure_can_create(?TEST_CREATE_NUM
+                                       ,[{'auth_by', ?RESELLER_ACCOUNT_ID}
+                                        ]
+                                       )
              )
     }.

@@ -165,4 +165,4 @@ pub_feature(PN) ->
     kz_json:get_value(?KEY, Doc).
 
 is_force_outbound(PN) ->
-    knm_number:is_force_outbound(PN).
+    knm_lib:is_force_outbound(PN).

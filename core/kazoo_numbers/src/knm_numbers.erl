@@ -142,7 +142,7 @@ create(Nums, Options) ->
     case {knm_pipe:succeeded(Col1), NotFounds} of
         {[], []} -> Col0;
         {_, NotFounds} ->
-            try knm_number:state_for_create(Options) of
+            try knm_lib:state_for_create(Options) of
                 ToState ->
                     lager:debug("picked state ~s for ~s for ~p", [ToState, knm_options:assign_to(Options), Nums]),
                     NewOptions = [{'state', ToState} | Options],
@@ -361,8 +361,8 @@ take_not_founds(Collection) ->
 
 -spec maybe_create(kz_term:ne_binaries(), knm_pipe:collection()) -> knm_pipe:collection().
 maybe_create(NotFounds, T) ->
-    Ta = knm_pipe:do(fun knm_number:ensure_can_create/1, knm_pipe:new(knm_pipe:options(T), NotFounds)),
-    Tb = knm_pipe:pipe(T, [fun knm_number:ensure_can_load_to_create/1
+    Ta = knm_pipe:do(fun knm_lib:ensure_can_create/1, knm_pipe:new(knm_pipe:options(T), NotFounds)),
+    Tb = knm_pipe:pipe(T, [fun knm_lib:ensure_can_load_to_create/1
                           ,fun update_for_create/1
                           ]),
     knm_pipe:merge_okkos(Ta, Tb).
