@@ -853,7 +853,7 @@ identify(Context, Num) ->
         {'ok', AccountId, ExtraOptions} ->
             JObj = kz_json:from_list(
                      [{<<"account_id">>, AccountId}
-                     ,{<<"number">>, knm_number_options:number(ExtraOptions)}
+                     ,{<<"number">>, knm_options:number(ExtraOptions)}
                      ]),
             crossbar_util:response(JObj, Context);
         {'error', _R}=Error ->
@@ -901,7 +901,7 @@ set_response({'ok', Thing}, Context, _) ->
     end;
 
 set_response(Ret=#{'quotes' := Quotes, 'options' := Options}, Context, CB) ->
-    case {knm_number_options:dry_run(Options)
+    case {knm_options:dry_run(Options)
          ,kz_term:is_empty(Quotes)
          }
     of
@@ -1010,9 +1010,9 @@ numbers_action(Context, ?HTTP_DELETE, Numbers) ->
     Releaser = pick_release_or_delete(Context, Options),
     knm_numbers:Releaser(Numbers, Options).
 
--spec pick_release_or_delete(cb_context:context(), knm_number_options:options()) -> 'release' | 'delete'.
+-spec pick_release_or_delete(cb_context:context(), knm_options:options()) -> 'release' | 'delete'.
 pick_release_or_delete(Context, Options) ->
-    AuthBy = knm_number_options:auth_by(Options),
+    AuthBy = knm_options:auth_by(Options),
     Pick = case kz_term:is_true(cb_context:req_param(Context, <<"hard">>, 'false'))
                andalso kzd_accounts:is_superduper_admin(AuthBy)
            of
@@ -1045,7 +1045,7 @@ has_tokens(Context, Count) ->
             'false'
     end.
 
--spec default_knm_options(cb_context:context()) -> knm_number_options:options().
+-spec default_knm_options(cb_context:context()) -> knm_options:options().
 default_knm_options(Context) ->
     AuthAccountId = cb_context:auth_account_id(Context),
     [{'crossbar', [{'services', kz_services:fetch(AuthAccountId)}

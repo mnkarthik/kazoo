@@ -1846,7 +1846,7 @@ generate_numbers(Type, AccountId, StartingNumber, Quantity) ->
 
 -spec delete(kz_term:ne_binary()) -> 'no_return'.
 delete(Num) ->
-    case knm_number:delete(Num, knm_number_options:default()) of
+    case knm_number:delete(Num, knm_options:default()) of
         {'ok', _} -> io:format("Removed ~s\n", [Num]);
         {'error', _R} -> io:format("ERROR: ~p\n", [_R])
     end,

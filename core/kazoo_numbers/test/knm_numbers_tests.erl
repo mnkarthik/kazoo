@@ -186,7 +186,7 @@ attempt_setting_e911_on_disallowed_number() ->
 
 
 delete() ->
-    Ret = knm_numbers:delete([?NOT_NUM, ?TEST_AVAILABLE_NUM], knm_number_options:default()),
+    Ret = knm_numbers:delete([?NOT_NUM, ?TEST_AVAILABLE_NUM], knm_options:default()),
     [?_assertEqual(#{?NOT_NUM => 'not_reconcilable'}, maps:get('failed', Ret))
     ,?_assertMatch([_], maps:get('succeeded', Ret))
     ,{"verify number was indeed deleted"
@@ -198,9 +198,9 @@ delete() ->
 
 reconcile() ->
     Ret0 = knm_numbers:reconcile([?NOT_NUM], []),
-    Ret1 = knm_numbers:reconcile([?NOT_NUM, ?TEST_AVAILABLE_NUM], knm_number_options:default()),
+    Ret1 = knm_numbers:reconcile([?NOT_NUM, ?TEST_AVAILABLE_NUM], knm_options:default()),
     Ret2 = knm_numbers:reconcile([?NOT_NUM, ?TEST_AVAILABLE_NUM]
-                                ,[{assign_to, ?RESELLER_ACCOUNT_ID} | knm_number_options:default()]),
+                                ,[{assign_to, ?RESELLER_ACCOUNT_ID} | knm_options:default()]),
     [?_assertEqual(#{?NOT_NUM => 'not_reconcilable'}, maps:get('failed', Ret0))
     ,?_assertEqual([], maps:get('succeeded', Ret0))
     ,?_assertEqual(#{?NOT_NUM => 'not_reconcilable', ?TEST_AVAILABLE_NUM => error_assign_to_undefined()}
@@ -228,12 +228,12 @@ error_assign_to_undefined() ->
 
 
 reserve() ->
-    AssignToChild = [{assign_to, ?CHILD_ACCOUNT_ID} | knm_number_options:default()],
+    AssignToChild = [{assign_to, ?CHILD_ACCOUNT_ID} | knm_options:default()],
     Ret1 = knm_numbers:reserve([?NOT_NUM, ?TEST_AVAILABLE_NUM]
                               ,[{assign_to,?RESELLER_ACCOUNT_ID}, {auth_by,?MASTER_ACCOUNT_ID}]),
-    Ret2b = knm_numbers:reserve([?NOT_NUM, ?TEST_IN_SERVICE_NUM], knm_number_options:default()),
+    Ret2b = knm_numbers:reserve([?NOT_NUM, ?TEST_IN_SERVICE_NUM], knm_options:default()),
     Ret2 = knm_numbers:reserve([?NOT_NUM, ?TEST_IN_SERVICE_NUM]
-                              ,[{assign_to,?RESELLER_ACCOUNT_ID} | knm_number_options:default()]),
+                              ,[{assign_to,?RESELLER_ACCOUNT_ID} | knm_options:default()]),
     Ret3 = knm_numbers:reserve([?NOT_NUM, ?TEST_IN_SERVICE_NUM], AssignToChild),
     [?_assertEqual(#{?NOT_NUM => 'not_reconcilable'}, maps:get('failed', Ret1))
     ,?_assertMatch([_], maps:get('succeeded', Ret1))
@@ -287,7 +287,7 @@ assign_to_app() ->
 
 release() ->
     Ret1 = knm_numbers:release([?NOT_NUM, ?TEST_IN_SERVICE_WITH_HISTORY_NUM]),
-    Ret2 = knm_numbers:release([?NOT_NUM, ?TEST_IN_SERVICE_MDN], knm_number_options:mdn_options()),
+    Ret2 = knm_numbers:release([?NOT_NUM, ?TEST_IN_SERVICE_MDN], knm_options:mdn_options()),
     Ret3 = knm_numbers:release([?NOT_NUM, ?TEST_IN_SERVICE_BAD_CARRIER_NUM]),
     [?_assertEqual(#{?NOT_NUM => 'not_reconcilable'}, maps:get('failed', Ret1))
     ,?_assertMatch([_], maps:get('succeeded', Ret1))

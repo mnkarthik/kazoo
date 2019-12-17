@@ -27,7 +27,7 @@ db_dependant() ->
 keeps_carrier() ->
     Num = ?BW_EXISTING_DID,
     {ok, PN0} = knm_number:get(Num),
-    Options = [{assign_to, ?RESELLER_ACCOUNT_ID} | knm_number_options:default()],
+    Options = [{assign_to, ?RESELLER_ACCOUNT_ID} | knm_options:default()],
     {ok, PN1} = knm_number:reconcile(Num, Options),
     [?_assert(knm_phone_number:is_dirty(PN1))
     ,?_assertNotEqual(knm_carriers:default_carrier(), knm_phone_number:module_name(PN0))
@@ -41,7 +41,7 @@ sets_carrier_for_mobile() ->
     {ok, PN0} = knm_number:get(Num),
     Options = [{assign_to, ?RESELLER_ACCOUNT_ID}
               ,{module_name, ?CARRIER_MDN}
-               | knm_number_options:default()
+               | knm_options:default()
               ],
     {ok, PN1} = knm_number:reconcile(Num, Options),
     [?_assert(knm_phone_number:is_dirty(PN1))

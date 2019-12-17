@@ -66,7 +66,7 @@ Do note though that this operation can take a long time, depending on the amount
 #### Options
 
 The `knm_number` API functions often take a second argument of options.
-These are encapsulated in the `knm_number_options` module, including a handy `-type` for better type checking.
+These are encapsulated in the `knm_options` module, including a handy `-type` for better type checking.
 
 
 #### Bulk operations

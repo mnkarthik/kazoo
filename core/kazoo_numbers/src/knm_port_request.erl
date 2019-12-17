@@ -370,10 +370,10 @@ maybe_transition(PortReq, Metadata, ?PORT_CANCELED) ->
 %% `port_request' which the number doc is already created.
 %% @end
 %%------------------------------------------------------------------------------
--spec compatibility_transition(knm_number_options:extra_options(), transition_metadata()) -> 'ok' | {'error', any()}.
+-spec compatibility_transition(knm_options:extra_options(), transition_metadata()) -> 'ok' | {'error', any()}.
 compatibility_transition(NumberProps, Metadata) ->
-    Num = knm_number_options:number(NumberProps),
-    AccountId = knm_number_options:account_id(NumberProps),
+    Num = knm_options:number(NumberProps),
+    AccountId = knm_options:account_id(NumberProps),
     completed_portin(Num, AccountId, Metadata).
 
 -spec transition(kz_json:object(), transition_metadata(), kz_term:ne_binaries(), kz_term:ne_binary()) ->

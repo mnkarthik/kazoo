@@ -9,7 +9,7 @@
 %%%
 %%% @end
 %%%-----------------------------------------------------------------------------
--module(knm_number_options).
+-module(knm_options).
 
 -export([assign_to/1, assign_to/2, set_assign_to/2
         ,auth_by/1, auth_by/2

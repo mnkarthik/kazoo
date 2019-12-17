@@ -268,10 +268,10 @@ get_endpoint_data(State) ->
             throw('unknown_account')
     end.
 
--spec get_endpoint_data(ts_callflow:state(), kapi_route:req(), kz_term:ne_binary(), kz_term:ne_binary(), knm_number_options:extra_options()) ->
+-spec get_endpoint_data(ts_callflow:state(), kapi_route:req(), kz_term:ne_binary(), kz_term:ne_binary(), knm_options:extra_options()) ->
           {'endpoint', kz_json:object()}.
 get_endpoint_data(State, RouteReq, ToDID, AccountId, NumberProps) ->
-    ForceOut = knm_number_options:should_force_outbound(NumberProps),
+    ForceOut = knm_options:should_force_outbound(NumberProps),
     lager:info("building endpoint for account id ~s with force out ~s", [AccountId, ForceOut]),
     RoutingData1 = routing_data(ToDID, AccountId),
 

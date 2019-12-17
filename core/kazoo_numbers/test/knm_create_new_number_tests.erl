@@ -245,7 +245,7 @@ create_new_port_in() ->
     ].
 
 create_existing_in_service() ->
-    Options = [{'assign_to', ?RESELLER_ACCOUNT_ID} | knm_number_options:default()],
+    Options = [{'assign_to', ?RESELLER_ACCOUNT_ID} | knm_options:default()],
     Resp = knm_number:create(?TEST_IN_SERVICE_NUM, Options),
     [{"Verifying that IN SERVICE numbers can't be created"
      ,?_assertMatch({'error', _}, Resp)

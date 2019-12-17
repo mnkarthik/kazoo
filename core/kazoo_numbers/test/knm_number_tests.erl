@@ -85,7 +85,7 @@ get_not_found() ->
 
 mdn_transitions() ->
     Num = ?TEST_IN_SERVICE_MDN,
-    DefaultOptions = [{assign_to, ?MASTER_ACCOUNT_ID} | knm_number_options:mdn_options()],
+    DefaultOptions = [{assign_to, ?MASTER_ACCOUNT_ID} | knm_options:mdn_options()],
     {ok, PN1} = knm_number:move(Num, ?MASTER_ACCOUNT_ID, DefaultOptions),
     {ok, PN2} = knm_number:release(Num, DefaultOptions),
     {ok, PN3} = knm_number:reconcile(Num, DefaultOptions),
@@ -103,7 +103,7 @@ mdn_transitions() ->
      ,?_assertEqual(?NUMBER_STATE_IN_SERVICE, knm_phone_number:state(PN3))
      }
     ,{"Verify MDN cannot be reserved"
-     ,?_assertMatch({error,_}, knm_number:reserve(Num, knm_number_options:default()))
+     ,?_assertMatch({error,_}, knm_number:reserve(Num, knm_options:default()))
      }
     ,?_assert(knm_phone_number:is_dirty(PN4))
     ,{"Verify MDN creation forces state to in_service"
@@ -117,7 +117,7 @@ mdn_transitions() ->
 is_mdn_for_mdn_run() ->
     Run = {mdn_run, true},
     Base = [{auth_by,?MASTER_ACCOUNT_ID}],
-    Sudo = knm_number_options:default(),
+    Sudo = knm_options:default(),
     Fs = [{fun knm_phone_number:update_doc/2, kz_json:from_list([{<<"*">>,42}])}],
     [{"Verify an mdn_run && knm_mdn number can be updated"
      ,?_assertMatch({ok,_}, knm_number:update(?TEST_IN_SERVICE_MDN, Fs, [Run|Base]))

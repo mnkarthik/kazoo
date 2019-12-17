@@ -9,7 +9,7 @@
 %%%
 %%% @end
 %%%-----------------------------------------------------------------------------
--module(knm_number_states).
+-module(knm_states).
 
 -export([to_options_state/1]).
 
@@ -29,7 +29,7 @@
 -spec to_options_state(knm_pipe:collection()) -> knm_pipe:collection().
 %% FIXME: opaque
 to_options_state(T=#{'options' := Options}) ->
-    TargetState = knm_number_options:state(Options),
+    TargetState = knm_options:state(Options),
     lager:debug("attempting to change to state ~s", [TargetState]),
     change_state(T, TargetState).
 

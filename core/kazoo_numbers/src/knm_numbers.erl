@@ -83,31 +83,31 @@ prev_assigned_to(#{'todo' := PNs}) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec get(kz_term:ne_binaries()) -> knm_pipe:collection().
-get(Nums) -> get(Nums, knm_number_options:default()).
+get(Nums) -> get(Nums, knm_options:default()).
 
--spec get(kz_term:ne_binaries(), knm_number_options:options()) -> knm_pipe:collection().
+-spec get(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 get(Nums, Options) -> do_get(Nums, Options).
 
--spec do_get(kz_term:ne_binaries(), knm_number_options:options()) -> knm_pipe:collection().
+-spec do_get(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 do_get(Nums, Options) ->
     {Yes, No} = knm_converters:are_reconcilable(Nums),
     knm_pipe:pipe(knm_pipe:new(Options, Yes, No)
                  ,[fun knm_phone_number:fetch/1  %% fetch/1 puts PNs in "succeeded"!
                   ]).
 
--spec do_get_pn(kz_term:ne_binaries(), knm_number_options:options()) -> knm_pipe:collection().
+-spec do_get_pn(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 do_get_pn(Nums, Options) ->
     {Yes, No} = knm_converters:are_reconcilable(Nums),
     knm_pipe:do(fun knm_phone_number:fetch/1, knm_pipe:new(Options, Yes, No)).
 
--spec do_get_pn(kz_term:ne_binaries(), knm_number_options:options(), knm_pipe:reason()) -> knm_pipe:collection().
+-spec do_get_pn(kz_term:ne_binaries(), knm_options:options(), knm_pipe:reason()) -> knm_pipe:collection().
 do_get_pn(Nums, Options, Error) ->
     {Yes, No} = knm_converters:are_reconcilable(Nums),
     knm_pipe:do(fun knm_phone_number:fetch/1, knm_pipe:new(Options, Yes, No, Error)).
 
 -spec from_jobjs(kz_json:objects()) -> knm_pipe:collection().
 from_jobjs(JObjs) ->
-    Options = knm_number_options:default(),
+    Options = knm_options:default(),
     PNs = [knm_phone_number:from_json_with_options(Doc, Options)
            || JObj <- JObjs,
               Doc <- [kz_json:get_value(<<"doc">>, JObj)],
@@ -116,7 +116,7 @@ from_jobjs(JObjs) ->
     knm_pipe:new(Options, PNs, []).
 
 -define(OPTIONS_FOR_LOAD(_Nums, Options),
-        case knm_number_options:ported_in(Options) of
+        case knm_options:ported_in(Options) of
             'false' -> Options;
             'true' -> [{'module_name', ?PORT_IN_MODULE_NAME}|Options]
         end).
@@ -130,7 +130,7 @@ from_jobjs(JObjs) ->
 %% attempt to create them with state `in_service'.</div>
 %% @end
 %%------------------------------------------------------------------------------
--spec create(kz_term:ne_binaries(), knm_number_options:options()) -> knm_pioe:collection().
+-spec create(kz_term:ne_binaries(), knm_options:options()) -> knm_pioe:collection().
 %% FIXME: opaque
 create(Nums, Options) ->
     Col0 = knm_pipe:pipe(do_get_pn(Nums
@@ -144,10 +144,10 @@ create(Nums, Options) ->
         {_, NotFounds} ->
             try knm_number:state_for_create(Options) of
                 ToState ->
-                    lager:debug("picked state ~s for ~s for ~p", [ToState, knm_number_options:assign_to(Options), Nums]),
+                    lager:debug("picked state ~s for ~s for ~p", [ToState, knm_options:assign_to(Options), Nums]),
                     NewOptions = [{'state', ToState} | Options],
                     knm_pipe:pipe(maybe_create(NotFounds, knm_pipe:set_options(Col1, NewOptions))
-                                 ,[fun knm_number_states:to_options_state/1
+                                 ,[fun knm_states:to_options_state/1
                                   ,fun save_numbers/1
                                   ])
             catch 'throw':{'error', 'unauthorized'} ->
@@ -165,13 +165,13 @@ create(Nums, Options) ->
 %%------------------------------------------------------------------------------
 -spec move(kz_term:ne_binaries(), kz_term:ne_binary()) -> knm_pipe:collection().
 move(Nums, MoveTo) ->
-    move(Nums, MoveTo, knm_number_options:default()).
+    move(Nums, MoveTo, knm_options:default()).
 
--spec move(kz_term:ne_binaries(), kz_term:ne_binary(), knm_number_options:options()) -> knm_pipe:collection().
+-spec move(kz_term:ne_binaries(), kz_term:ne_binary(), knm_options:options()) -> knm_pipe:collection().
 move(Nums, ?MATCH_ACCOUNT_RAW(MoveTo), Options0) ->
     Options = props:set_value('assign_to', MoveTo, Options0),
     {TFound, NotFounds} = take_not_founds(do_get(Nums, Options)),
-    Updates = knm_number_options:to_phone_number_setters(Options0),
+    Updates = knm_options:to_phone_number_setters(Options0),
     TUpdated = knm_pipe:do(fun (T) -> knm_phone_number:setters(T, Updates) end, TFound),
     TDiscovered = knm_pipe:do(fun discover/1, knm_pipe:new(Options, NotFounds)),
     T = knm_pipe:merge_okkos(TUpdated, TDiscovered),
@@ -185,11 +185,11 @@ move(Nums, ?MATCH_ACCOUNT_RAW(MoveTo), Options0) ->
 %%------------------------------------------------------------------------------
 -spec update(kz_term:ne_binaries(), knm_phone_number:set_functions()) -> knm_pipe:collection().
 update(Nums, Routines) ->
-    update(Nums, Routines, knm_number_options:default()).
+    update(Nums, Routines, knm_options:default()).
 
 -ifdef(TEST).
 
--spec update(kz_term:ne_binaries() | knm_phone_number:records(), knm_phone_number:set_functions(), knm_number_options:options()) ->
+-spec update(kz_term:ne_binaries() | knm_phone_number:records(), knm_phone_number:set_functions(), knm_options:options()) ->
           knm_pipe:collection().
 %% FIXME: first argument could be ne_binaries or knm_phone_numbers
 update([?NE_BINARY|_]=Nums, Routines, Options) ->
@@ -197,7 +197,7 @@ update([?NE_BINARY|_]=Nums, Routines, Options) ->
     do_update(do_get_pn(Nums, Options, Reason), Routines);
 update(Ns, Updates, Options) ->
     Routines = [{fun knm_phone_number:set_dirty/2, 'false'}
-                | knm_number_options:to_phone_number_setters(Options)
+                | knm_options:to_phone_number_setters(Options)
                 ++ Updates
                ],
     T0 = knm_pipe:new(Options, Ns),
@@ -206,7 +206,7 @@ update(Ns, Updates, Options) ->
 
 -else.
 
--spec update(kz_term:ne_binaries(), knm_phone_number:set_functions(), knm_number_options:options()) -> knm_pipe:collection().
+-spec update(kz_term:ne_binaries(), knm_phone_number:set_functions(), knm_options:options()) -> knm_pipe:collection().
 update(Nums, Routines, Options) ->
     Reason = 'not_reconcilable',  %% FIXME: unify to atom OR knm_error.
     do_update(do_get_pn(Nums, Options, Reason), Routines).
@@ -226,9 +226,9 @@ do_update(T0, Routines) ->
 %%------------------------------------------------------------------------------
 -spec release(kz_term:ne_binaries()) -> knm_pipe:collection().
 release(Nums) ->
-    release(Nums, knm_number_options:default()).
+    release(Nums, knm_options:default()).
 
--spec release(kz_term:ne_binaries(), knm_number_options:options()) -> knm_pipe:collection().
+-spec release(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 release(Nums, Options) ->
     knm_pipe:pipe(do_get_pn(Nums, Options)
                  ,[fun try_release/1
@@ -242,9 +242,9 @@ release(Nums, Options) ->
 %% Sounds too harsh for you? You are looking for release/1,2.
 %% @end
 %%------------------------------------------------------------------------------
--spec delete(kz_term:ne_binaries(), knm_number_options:options()) -> knm_pipe:collection().
+-spec delete(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 delete(Nums, Options) ->
-    case knm_phone_number:is_admin(knm_number_options:auth_by(Options)) of
+    case knm_phone_number:is_admin(knm_options:auth_by(Options)) of
         'false' ->
             knm_pipe:new(Options, [], Nums, knm_errors:to_json('unauthorized'));
         'true' ->
@@ -258,7 +258,7 @@ delete(Nums, Options) ->
 %% @doc Note: option `assign_to' needs to be set.
 %% @end
 %%------------------------------------------------------------------------------
--spec reconcile(kz_term:ne_binaries(), knm_number_options:options()) -> knm_pipe:collection().
+-spec reconcile(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 reconcile(Nums, Options0) ->
     Options = [{'auth_by', ?KNM_DEFAULT_AUTH_BY} | Options0],
     T0 = knm_pipe:pipe(do_get(Nums, Options)
@@ -274,7 +274,7 @@ reconcile(Nums, Options0) ->
 %% @doc Fetches then transitions existing numbers to the reserved state.
 %% @end
 %%------------------------------------------------------------------------------
--spec reserve(kz_term:ne_binaries(), knm_number_options:options()) -> knm_pipe:collection().
+-spec reserve(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 reserve(Nums, Options) ->
     knm_pipe:pipe(do_get(Nums, Options)
                  ,[fun fail_if_assign_to_is_not_an_account_id/1
@@ -287,9 +287,9 @@ reserve(Nums, Options) ->
 %%------------------------------------------------------------------------------
 -spec assign_to_app(kz_term:ne_binaries(), kz_term:api_ne_binary()) -> knm_pipe:collection().
 assign_to_app(Nums, App) ->
-    assign_to_app(Nums, App, knm_number_options:default()).
+    assign_to_app(Nums, App, knm_options:default()).
 
--spec assign_to_app(kz_term:ne_binaries(), kz_term:api_ne_binary(), knm_number_options:options()) -> knm_pipe:collection().
+-spec assign_to_app(kz_term:ne_binaries(), kz_term:api_ne_binary(), knm_options:options()) -> knm_pipe:collection().
 assign_to_app(Nums, App, Options) ->
     Setters = [{fun knm_phone_number:set_used_by/2, App}],
     knm_pipe:pipe(do_get_pn(Nums, Options)
@@ -370,21 +370,21 @@ maybe_create(NotFounds, T) ->
 -spec update_for_create(knm_pipe:collection()) -> knm_pipe:collection().
 %% FIXME: opaque
 update_for_create(T=#{'todo' := _PNs, 'options' := Options}) ->
-    Updates = knm_number_options:to_phone_number_setters(
+    Updates = knm_options:to_phone_number_setters(
                 props:delete('state', Options)
                ),
     knm_phone_number:setters(T, Updates).
 
--spec update_for_reconcile(knm_pipe:collection(), knm_number_options:options()) -> knm_pipe:collection().
+-spec update_for_reconcile(knm_pipe:collection(), knm_options:options()) -> knm_pipe:collection().
 update_for_reconcile(T, Options) ->
-    S = [{fun knm_phone_number:set_assigned_to/2, knm_number_options:assign_to(Options)}
-        ,{fun knm_phone_number:set_auth_by/2, knm_number_options:auth_by(Options)}
-        ,{fun knm_phone_number:update_doc/2, knm_number_options:public_fields(Options)}
+    S = [{fun knm_phone_number:set_assigned_to/2, knm_options:assign_to(Options)}
+        ,{fun knm_phone_number:set_auth_by/2, knm_options:auth_by(Options)}
+        ,{fun knm_phone_number:update_doc/2, knm_options:public_fields(Options)}
         ,{fun knm_phone_number:set_state/2, ?NUMBER_STATE_IN_SERVICE}
          | case props:is_defined('module_name', Options) of
                'false' -> [];
                'true' ->
-                   [{fun knm_phone_number:set_module_name/2, knm_number_options:module_name(Options)}]
+                   [{fun knm_phone_number:set_module_name/2, knm_options:module_name(Options)}]
            end
         ],
     knm_phone_number:setters(T, S).
@@ -407,8 +407,8 @@ update_services(T=#{'todo' := Ns}) -> knm_pipe:set_succeeded(T, Ns).
 -else.
 %% FIXME: opaque
 update_services(T=#{'todo' := Numbers, 'options' := Options}) ->
-    case {knm_number_options:batch_run(Options)
-         ,knm_number_options:dry_run(Options)
+    case {knm_options:batch_run(Options)
+         ,knm_options:dry_run(Options)
          }
     of
         {'true', _} ->
@@ -483,7 +483,7 @@ check_creditably(Services, Quotes, Amount) ->
 -spec maybe_dry_run_services(knm_pipe:collection()) -> knm_pipe:collection().
 %% FIXME: opaque
 maybe_dry_run_services(T=#{'todo' := Numbers, 'options' := Options}) ->
-    case knm_number_options:crossbar(Options) of
+    case knm_options:crossbar(Options) of
         'undefined' -> knm_pipe:set_succeeded(T, Numbers);
         CrossbarOptions -> dry_run_services(T, CrossbarOptions)
     end.
@@ -588,21 +588,21 @@ discover(T0=#{'todo' := Nums, 'options' := Options}) ->
 move_to(T) ->
     NewOptions = [{'state', ?NUMBER_STATE_IN_SERVICE} | knm_pipe:options(T)],
     knm_pipe:pipe(knm_pipe:set_options(T, NewOptions)
-                 ,[fun knm_number_states:to_options_state/1
+                 ,[fun knm_states:to_options_state/1
                   ,fun save_numbers/1
                   ]).
 -spec to_reserved(knm_pipe:collection()) -> knm_pipe:collection().
 to_reserved(T) ->
     NewOptions = [{'state', ?NUMBER_STATE_RESERVED} | knm_pipe:options(T)],
     knm_pipe:pipe(knm_pipe:set_options(T, NewOptions)
-                 ,[fun knm_number_states:to_options_state/1
+                 ,[fun knm_states:to_options_state/1
                   ,fun save_numbers/1
                   ]).
 
 -spec fail_if_assign_to_is_not_an_account_id(knm_pipe:collection() | knm_pipe:collection()) -> knm_pipe:collection() | knm_pipe:collection().
 %% FIXME: opaque
 fail_if_assign_to_is_not_an_account_id(T=#{'todo' := NsOrPNs, 'options' := Options}) ->
-    case knm_number_options:assign_to(Options) of
+    case knm_options:assign_to(Options) of
         ?MATCH_ACCOUNT_RAW(_) -> knm_pipe:set_succeeded(T, NsOrPNs);
         _ ->
             Reason = knm_errors:to_json('assign_failure', 'undefined', 'field_undefined'),
@@ -702,7 +702,7 @@ maybe_age(T=#{'todo' := PNs}) ->
             {Yes, No} = lists:partition(fun is_state_available/1, PNs),
             Ta = knm_pipe:do(fun knm_pipe:id/1, knm_pipe:set_todo(T, No)),
             NewOptions = [{'state', ?NUMBER_STATE_AGING} | knm_pipe:options(T)],
-            Tb = knm_pipe:do(fun knm_number_states:to_options_state/1
+            Tb = knm_pipe:do(fun knm_states:to_options_state/1
                             ,knm_pipe:set_options(knm_pipe:set_todo(T,Yes), NewOptions)
                             ),
             knm_pipe:merge_okkos(Ta, Tb)

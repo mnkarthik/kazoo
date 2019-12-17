@@ -158,14 +158,14 @@ new(T=#{'todo' := Nums, 'options' := Options}) ->
     PNs = [do_new(DID, Setters) || DID <- Nums],
     knm_pipe:set_succeeded(T, PNs).
 
--spec new_setters(knm_number_options:options()) -> set_functions().
+-spec new_setters(knm_options:options()) -> set_functions().
 new_setters(Options) ->
-    knm_number_options:to_phone_number_setters(options_for_new_setters(Options)).
+    knm_options:to_phone_number_setters(options_for_new_setters(Options)).
 
--spec options_for_new_setters(knm_number_options:options()) -> knm_number_options:options().
+-spec options_for_new_setters(knm_options:options()) -> knm_options:options().
 options_for_new_setters(Options) ->
-    case {knm_number_options:ported_in(Options)
-         ,?NUMBER_STATE_PORT_IN =:= knm_number_options:state(Options)
+    case {knm_options:ported_in(Options)
+         ,?NUMBER_STATE_PORT_IN =:= knm_options:state(Options)
          }
     of
         {'true', 'false'} -> props:set_value('module_name', ?PORT_IN_MODULE_NAME, Options);
@@ -182,7 +182,7 @@ do_new(DID, Setters) ->
 from_number(DID) ->
     from_json(kz_doc:set_id(kzd_phone_numbers:new(), DID)).
 
--spec from_number_with_options(kz_term:ne_binary(), knm_number_options:options()) -> record().
+-spec from_number_with_options(kz_term:ne_binary(), knm_options:options()) -> record().
 from_number_with_options(DID, Options) ->
     do_new(DID, new_setters(Options)).
 
@@ -194,7 +194,7 @@ from_number_with_options(DID, Options) ->
           return() |
           knm_pipe:collection().
 fetch(?NE_BINARY=Num) ->
-    fetch(Num, knm_number_options:default());
+    fetch(Num, knm_options:default());
 %% FIXME: opaque
 fetch(T0=#{'todo' := Nums, 'options' := Options}) ->
     Pairs = group_by(lists:usort(knm_converters:normalize(Nums)), fun group_number_by_db/2),
@@ -209,13 +209,13 @@ fetch(T0=#{'todo' := Nums, 'options' := Options}) ->
         end,
     maps:fold(F, T0, Pairs).
 
--spec fetch_in(kz_term:ne_binary(), kz_term:ne_binary() | kz_term:ne_binaries(), knm_number_options:options()) ->
+-spec fetch_in(kz_term:ne_binary(), kz_term:ne_binary() | kz_term:ne_binaries(), knm_options:options()) ->
           {'ok', kz_json:objects()} |
           kazoo_data:data_error().
 fetch_in(NumberDb, [Num], Options) ->
     fetch(NumberDb, Num, Options);
 fetch_in(NumberDb, Nums, Options) ->
-    case knm_number_options:batch_run(Options) of
+    case knm_options:batch_run(Options) of
         'true' -> kz_datamgr:open_docs(NumberDb, Nums);
         'false' -> kz_datamgr:open_cache_docs(NumberDb, Nums)
     end.
@@ -243,7 +243,7 @@ do_handle_fetch(T=#{'options' := Options}, Doc) ->
         {'error', R} -> knm_pipe:set_failed(T, kz_doc:id(Doc), R)
     end.
 
--spec fetch(kz_term:ne_binary(), knm_number_options:options()) ->
+-spec fetch(kz_term:ne_binary(), knm_options:options()) ->
           return() |
           knm_pipe:collection().
 fetch(Num=?NE_BINARY, Options) ->
@@ -254,19 +254,19 @@ fetch(Num=?NE_BINARY, Options) ->
         {'error', _R}=Error -> Error
     end.
 
--spec fetch(kz_term:api_ne_binary(), kz_term:ne_binary(), knm_number_options:options()) ->
+-spec fetch(kz_term:api_ne_binary(), kz_term:ne_binary(), knm_options:options()) ->
           {'ok', kz_json:object()} |
           {'error', any()}.
 fetch('undefined', _Normalized, _Options) ->
     lager:info("no database for number ~s", [_Normalized]),
     {'error', 'not_found'};
 fetch(NumberDb, NormalizedNum, Options) ->
-    case knm_number_options:batch_run(Options) of
+    case knm_options:batch_run(Options) of
         'true' -> kz_datamgr:open_doc(NumberDb, NormalizedNum);
         'false' -> kz_datamgr:open_cache_doc(NumberDb, NormalizedNum)
     end.
 
--spec handle_fetch(kz_json:object(), knm_number_options:options()) ->
+-spec handle_fetch(kz_json:object(), knm_options:options()) ->
           {'ok', record()}.
 handle_fetch(JObj, Options) ->
     PN = from_json_with_options(JObj, Options),
@@ -294,7 +294,7 @@ xnor('true', 'true') -> 'true'.
 
 %% FIXME: opaque
 is_mdn_for_mdn_run(T0=#{'todo' := PNs, 'options' := Options}) ->
-    IsMDNRun = knm_number_options:mdn_run(Options),
+    IsMDNRun = knm_options:mdn_run(Options),
     Reason = error_unauthorized(),
     F = fun (PN, T) ->
                 case is_mdn_for_mdn_run(PN, IsMDNRun) of
@@ -321,7 +321,7 @@ save(T0) ->
 
 %% FIXME: opaque
 take_not_to_save(T0=#{'todo' := PNs, 'options' := Options}) ->
-    case knm_number_options:dry_run(Options) of
+    case knm_options:dry_run(Options) of
         'true' ->
             lager:debug("dry_run-ing btw"),
             %% FIXME: opaque
@@ -356,7 +356,7 @@ log_why_not_to_save('false', _Num) ->
 -spec delete(knm_pipe:collection()) -> knm_pipe:collection().
 %% FIXME: opaque
 delete(T=#{'todo' := PNs, 'options' := Options}) ->
-    case knm_number_options:dry_run(Options) of
+    case knm_options:dry_run(Options) of
         'true' ->
             lager:debug("dry_run-ing btw, not deleting anything"),
             knm_pipe:set_succeeded(T, PNs);
@@ -585,7 +585,7 @@ features_fold(FeatureKey, Acc, JObj) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec from_json_with_options(kz_json:object(), record() | knm_number_options:options()) ->
+-spec from_json_with_options(kz_json:object(), record() | knm_options:options()) ->
           record().
 from_json_with_options(JObj, #knm_phone_number{}=PN) ->
     Options = [{'dry_run', dry_run(PN)}
@@ -596,14 +596,14 @@ from_json_with_options(JObj, #knm_phone_number{}=PN) ->
     from_json_with_options(JObj, Options);
 from_json_with_options(JObj, Options)
   when is_list(Options) ->
-    Updates = [{fun set_assign_to/2, knm_number_options:assign_to(Options)}
-               %% See knm_number_options:default/0 for these 4.
-              ,{fun set_dry_run/2, knm_number_options:dry_run(Options, 'false')}
-              ,{fun set_batch_run/2, knm_number_options:batch_run(Options, 'false')}
-              ,{fun set_mdn_run/2, knm_number_options:mdn_run(Options)}
-              ,{fun set_auth_by/2, knm_number_options:auth_by(Options, ?KNM_DEFAULT_AUTH_BY)}
+    Updates = [{fun set_assign_to/2, knm_options:assign_to(Options)}
+               %% See knm_options:default/0 for these 4.
+              ,{fun set_dry_run/2, knm_options:dry_run(Options, 'false')}
+              ,{fun set_batch_run/2, knm_options:batch_run(Options, 'false')}
+              ,{fun set_mdn_run/2, knm_options:mdn_run(Options)}
+              ,{fun set_auth_by/2, knm_options:auth_by(Options, ?KNM_DEFAULT_AUTH_BY)}
                |case props:is_defined('module_name', Options) of
-                    'true' -> [{fun set_module_name/2, knm_number_options:module_name(Options)}];
+                    'true' -> [{fun set_module_name/2, knm_options:module_name(Options)}];
                     'false' -> []
                 end
               ],
@@ -995,7 +995,7 @@ add_reserve_history(?MATCH_ACCOUNT_RAW(AccountId)
 -spec push_reserve_history(knm_pipe:collection()) -> knm_pipe:collection().
 %% FIXME: opaque
 push_reserve_history(T=#{'todo' := PNs, 'options' := Options}) ->
-    AssignTo = knm_number_options:assign_to(Options),
+    AssignTo = knm_options:assign_to(Options),
     NewPNs = [add_reserve_history(AssignTo, PN) || PN <- PNs],
     knm_pipe:set_succeeded(T, NewPNs).
 

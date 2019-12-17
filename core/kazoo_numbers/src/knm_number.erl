@@ -47,7 +47,7 @@
                         {'not_in_service', kz_term:ne_binary()} |
                         {'account_disabled', kz_term:ne_binary()}.
 
--type lookup_account_return() :: {'ok', kz_term:ne_binary(), knm_number_options:extra_options()} |
+-type lookup_account_return() :: {'ok', kz_term:ne_binary(), knm_options:extra_options()} |
                                  {'error', lookup_error()}.
 
 -type dry_run_return() :: {'dry_run', knm_pipe:quotes()}.
@@ -72,7 +72,7 @@
                    ).
 
 -define(RUN_KNM_NUMBERS_FUN(F, Num, Options)
-       ,case {knm_number_options:dry_run(Options)
+       ,case {knm_options:dry_run(Options)
              ,knm_numbers:F([Num], Options)
              }
         of ?KNM_NUMBERS_CLAUSES(Num)
@@ -80,7 +80,7 @@
        ).
 
 -define(RUN_KNM_NUMBERS_FUN_ARGS(F, Num, Arg2, Options),
-        case {knm_number_options:dry_run(Options)
+        case {knm_options:dry_run(Options)
              ,knm_numbers:F([Num], Arg2, Options)
              }
         of ?KNM_NUMBERS_CLAUSES(Num)
@@ -98,9 +98,9 @@
 %%------------------------------------------------------------------------------
 -spec get(kz_term:ne_binary()) -> return().
 get(Num) ->
-    get(Num, knm_number_options:default()).
+    get(Num, knm_options:default()).
 
--spec get(kz_term:ne_binary(), knm_number_options:options()) -> return().
+-spec get(kz_term:ne_binary(), knm_options:options()) -> return().
 get(Num, Options) ->
     case knm_numbers:get([Num], Options) of
         %% FIXME: opaque
@@ -114,22 +114,22 @@ get(Num, Options) ->
 %% <div class="notice">`assign_to' number option MUST be set.</div>
 %% @end
 %%------------------------------------------------------------------------------
--spec create(kz_term:ne_binary(), knm_number_options:options()) -> return().
+-spec create(kz_term:ne_binary(), knm_options:options()) -> return().
 create(Num, Options) ->
     ?RUN_KNM_NUMBERS_FUN('create', Num, Options).
 
--spec state_for_create(knm_number_options:options()) -> kz_term:ne_binary().
+-spec state_for_create(knm_options:options()) -> kz_term:ne_binary().
 state_for_create(Options) ->
-    case {knm_number_options:state(Options, ?NUMBER_STATE_IN_SERVICE)
-         ,knm_number_options:ported_in(Options)
-         ,knm_number_options:module_name(Options)
+    case {knm_options:state(Options, ?NUMBER_STATE_IN_SERVICE)
+         ,knm_options:ported_in(Options)
+         ,knm_options:module_name(Options)
          }
     of
         {?NUMBER_STATE_PORT_IN=PortIn, _, _} -> PortIn;
         {_, 'true', _} -> ?NUMBER_STATE_IN_SERVICE;
         {_, _, ?CARRIER_MDN} -> ?NUMBER_STATE_IN_SERVICE;
         {State, _, _} ->
-            AuthBy = knm_number_options:auth_by(Options),
+            AuthBy = knm_options:auth_by(Options),
             lists:member(State, allowed_creation_states(Options, AuthBy))
                 orelse knm_errors:unauthorized(),
             lager:debug("allowing picking state ~s for ~s", [State, AuthBy]),
@@ -140,7 +140,7 @@ state_for_create(Options) ->
 allowed_creation_states(AuthBy) ->
     allowed_creation_states([], AuthBy).
 
--spec allowed_creation_states(knm_number_options:options(), kz_term:api_ne_binary()) -> kz_term:ne_binaries().
+-spec allowed_creation_states(knm_options:options(), kz_term:api_ne_binary()) -> kz_term:ne_binaries().
 allowed_creation_states(_, 'undefined') -> [];
 allowed_creation_states(Options, AuthBy) ->
     case {knm_phone_number:is_admin(AuthBy)
@@ -195,7 +195,7 @@ ensure_state(PN, AllowedStates) ->
 %% @doc Fetches then transitions an existing number to the reserved state.
 %% @end
 %%------------------------------------------------------------------------------
--spec reserve(kz_term:ne_binary(), knm_number_options:options()) -> return().
+-spec reserve(kz_term:ne_binary(), knm_options:options()) -> return().
 reserve(Num, Options) ->
     ?RUN_KNM_NUMBERS_FUN('reserve', Num, Options).
 
@@ -212,9 +212,9 @@ ensure_can_create(T0=#{'todo' := Nums, 'options' := Options}) ->
         end,
     lists:foldl(F, T0, Nums).
 
--spec ensure_can_create(kz_term:ne_binary(), knm_number_options:options()) -> 'true'.
+-spec ensure_can_create(kz_term:ne_binary(), knm_options:options()) -> 'true'.
 ensure_can_create(Num, Options) ->
-    ensure_account_can_create(Options, knm_number_options:auth_by(Options))
+    ensure_account_can_create(Options, knm_options:auth_by(Options))
         andalso ensure_number_is_not_porting(Num, Options).
 
 -ifdef(TEST).
@@ -234,7 +234,7 @@ ensure_can_create(Num, Options) ->
        ).
 -endif.
 
--spec allow_number_additions(knm_number_options:options(), kz_term:ne_binary()) -> boolean().
+-spec allow_number_additions(knm_options:options(), kz_term:ne_binary()) -> boolean().
 allow_number_additions(_Options, ?KNM_DEFAULT_AUTH_BY) ->
     'true';
 allow_number_additions(_Options, _AccountId) ->
@@ -245,8 +245,8 @@ ensure_account_can_create(_, ?KNM_DEFAULT_AUTH_BY) ->
     lager:info("bypassing auth"),
     'true';
 ensure_account_can_create(Options, ?MATCH_ACCOUNT_RAW(AccountId)) ->
-    knm_number_options:ported_in(Options)
-        orelse knm_number_options:state(Options) =:= ?NUMBER_STATE_PORT_IN
+    knm_options:ported_in(Options)
+        orelse knm_options:state(Options) =:= ?NUMBER_STATE_PORT_IN
         orelse allow_number_additions(Options, AccountId)
         orelse knm_phone_number:is_admin(AccountId)
         orelse knm_errors:unauthorized();
@@ -254,7 +254,7 @@ ensure_account_can_create(_, _NotAnAccountId) ->
     lager:debug("'~p' is not an account id", [_NotAnAccountId]),
     knm_errors:unauthorized().
 
--spec ensure_number_is_not_porting(kz_term:ne_binary(), knm_number_options:options()) -> 'true'.
+-spec ensure_number_is_not_porting(kz_term:ne_binary(), knm_options:options()) -> 'true'.
 -ifdef(TEST).
 %% TODO: Remove me after fixturedb has save feature
 ensure_number_is_not_porting(?TEST_CREATE_NUM, _Options) -> 'true';
@@ -262,7 +262,7 @@ ensure_number_is_not_porting(?TEST_AVAILABLE_NUM = Num, _Options) ->
     knm_errors:number_is_porting(Num).
 -else.
 ensure_number_is_not_porting(Num, Options) ->
-    JustPorted = knm_number_options:ported_in(Options),
+    JustPorted = knm_options:ported_in(Options),
     case JustPorted
         orelse knm_port_request:get(Num)
     of
@@ -280,9 +280,9 @@ ensure_number_is_not_porting(Num, Options) ->
 
 -spec move(kz_term:ne_binary(), kz_term:ne_binary()) -> return().
 move(Num, MoveTo) ->
-    move(Num, MoveTo, knm_number_options:default()).
+    move(Num, MoveTo, knm_options:default()).
 
--spec move(kz_term:ne_binary(), kz_term:ne_binary(), knm_number_options:options()) -> return().
+-spec move(kz_term:ne_binary(), kz_term:ne_binary(), knm_options:options()) -> return().
 move(?NE_BINARY=Num, ?NE_BINARY=MoveTo, Options) ->
     ?RUN_KNM_NUMBERS_FUN_ARGS('move', Num, MoveTo, Options).
 
@@ -295,9 +295,9 @@ move(?NE_BINARY=Num, ?NE_BINARY=MoveTo, Options) ->
 
 -spec update(kz_term:ne_binary(), knm_phone_number:set_functions()) -> return().
 update(Num, Routines) ->
-    update(Num, Routines, knm_number_options:default()).
+    update(Num, Routines, knm_options:default()).
 
--spec update(kz_term:ne_binary(), knm_phone_number:set_functions(), knm_number_options:options()) -> return().
+-spec update(kz_term:ne_binary(), knm_phone_number:set_functions(), knm_options:options()) -> return().
 update(Num, Routines, Options) ->
     ?RUN_KNM_NUMBERS_FUN_ARGS('update', Num, Routines, Options).
 
@@ -305,7 +305,7 @@ update(Num, Routines, Options) ->
 %% @doc Note: option 'assign_to' needs to be set.
 %% @end
 %%------------------------------------------------------------------------------
--spec reconcile(kz_term:ne_binary(), knm_number_options:options()) -> return().
+-spec reconcile(kz_term:ne_binary(), knm_options:options()) -> return().
 reconcile(DID, Options) ->
     ?RUN_KNM_NUMBERS_FUN('reconcile', DID, Options).
 
@@ -316,9 +316,9 @@ reconcile(DID, Options) ->
 
 -spec release(kz_term:ne_binary()) -> return().
 release(Num) ->
-    release(Num, knm_number_options:default()).
+    release(Num, knm_options:default()).
 
--spec release(kz_term:ne_binary(), knm_number_options:options()) -> return().
+-spec release(kz_term:ne_binary(), knm_options:options()) -> return().
 release(Num, Options) ->
     ?RUN_KNM_NUMBERS_FUN('release', Num, Options).
 
@@ -327,7 +327,7 @@ release(Num, Options) ->
 %% Sounds too harsh for you? You are looking for release/1,2.
 %% @end
 %%------------------------------------------------------------------------------
--spec delete(kz_term:ne_binary(), knm_number_options:options()) -> return().
+-spec delete(kz_term:ne_binary(), knm_options:options()) -> return().
 delete(Num, Options) ->
     ?RUN_KNM_NUMBERS_FUN('delete', Num, Options).
 
@@ -338,9 +338,9 @@ delete(Num, Options) ->
 
 -spec assign_to_app(kz_term:ne_binary(), kz_term:api_ne_binary()) -> return().
 assign_to_app(Num, App) ->
-    assign_to_app(Num, App, knm_number_options:default()).
+    assign_to_app(Num, App, knm_options:default()).
 
--spec assign_to_app(kz_term:ne_binary(), kz_term:api_ne_binary(), knm_number_options:options()) -> return().
+-spec assign_to_app(kz_term:ne_binary(), kz_term:api_ne_binary(), knm_options:options()) -> return().
 assign_to_app(Num, App, Options) ->
     ?RUN_KNM_NUMBERS_FUN_ARGS('assign_to_app', Num, App, Options).
 

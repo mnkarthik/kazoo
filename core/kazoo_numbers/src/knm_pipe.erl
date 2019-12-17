@@ -52,7 +52,7 @@
 -type collection() :: collection(succeeded()).
 -type collection(Succeeded) :: collection(Succeeded, Succeeded).
 -type collection(Succeeded, TODOs) :: #{'failed' => failed()
-                                       ,'options' => knm_number_options:options()
+                                       ,'options' => knm_options:options()
                                        ,'quotes' => quotes() %% defined in knm_phone_number.hrl
                                        ,'succeeded' => Succeeded
                                        ,'todo' => kz_term:ne_binary() | TODOs
@@ -100,10 +100,10 @@ set_failed(Collection, PN, Reason) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec options(collection()) -> knm_number_options:options().
+-spec options(collection()) -> knm_options:options().
 options(#{'options' := Options}) -> Options.
 
--spec set_options(collection(), knm_number_options:options()) -> collection().
+-spec set_options(collection(), knm_options:options()) -> collection().
 set_options(Collection, Options) -> Collection#{'options' => Options}.
 
 %%------------------------------------------------------------------------------
@@ -155,15 +155,15 @@ add_succeeded(Collection=#{'succeeded' := Succeeded}, Numbers) when is_list(Numb
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec new(knm_number_options:options(), kz_term:ne_binaries()) ->
+-spec new(knm_options:options(), kz_term:ne_binaries()) ->
           collection(succeeded(), kz_term:ne_binaries()).
 new(Options, ToDos) -> new(Options, ToDos, []).
 
--spec new(knm_number_options:options(), kz_term:ne_binaries(), kz_term:ne_binaries()) ->
+-spec new(knm_options:options(), kz_term:ne_binaries(), kz_term:ne_binaries()) ->
           collection(succeeded(), kz_term:ne_binaries()).
 new(Options, ToDos, FailedNums) -> new(Options, ToDos, FailedNums, 'not_reconcilable').
 
--spec new(knm_number_options:options(), kz_term:ne_binaries(), kz_term:ne_binaries(), reason()) ->
+-spec new(knm_options:options(), kz_term:ne_binaries(), kz_term:ne_binaries(), reason()) ->
           collection(succeeded(), kz_term:ne_binaries()).
 new(Options, ToDos, FailedNums, Reason) ->
     #{'failed' => maps:from_list([{Num, Reason} || Num <- FailedNums])

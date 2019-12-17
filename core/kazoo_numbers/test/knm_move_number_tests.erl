@@ -97,7 +97,7 @@ move_changing_public_fields() ->
              ,{Key, 42}
              ],
     Options = [{public_fields, kz_json:from_list(Fields)}
-               |knm_number_options:default()
+               |knm_options:default()
               ],
     {ok, PN0} = knm_number:get(?TEST_AVAILABLE_NUM),
     {ok, PN} = knm_number:move(?TEST_AVAILABLE_NUM, ?RESELLER_ACCOUNT_ID, Options),

@@ -68,7 +68,7 @@ release_in_service_bad_carrier_number() ->
     ].
 
 release_in_service_mdn_number() ->
-    {ok, PN} = knm_number:release(?TEST_IN_SERVICE_MDN, knm_number_options:mdn_options()),
+    {ok, PN} = knm_number:release(?TEST_IN_SERVICE_MDN, knm_options:mdn_options()),
     [?_assert(knm_phone_number:is_dirty(PN))
     ,{"verify number state is changed"
      ,?_assertEqual(?NUMBER_STATE_DELETED, knm_phone_number:state(PN))
@@ -83,11 +83,11 @@ release_in_service_mdn_number() ->
     ].
 
 release_in_service_numbers() ->
-    DefaultAuth = knm_number_options:default(),
+    DefaultAuth = knm_options:default(),
     ResellerAuth = [{auth_by, ?RESELLER_ACCOUNT_ID}],
     MasterAuth = [{auth_by, ?MASTER_ACCOUNT_ID}],
-    ResellerMDNAuth = [{auth_by, ?RESELLER_ACCOUNT_ID}|knm_number_options:mdn_options()],
-    MasterMDNAuth = [{auth_by, ?MASTER_ACCOUNT_ID}|knm_number_options:mdn_options()],
+    ResellerMDNAuth = [{auth_by, ?RESELLER_ACCOUNT_ID}|knm_options:mdn_options()],
+    MasterMDNAuth = [{auth_by, ?MASTER_ACCOUNT_ID}|knm_options:mdn_options()],
     SimpleHistory = [?RESELLER_ACCOUNT_ID],
     DeeperHistory = [?RESELLER_ACCOUNT_ID, ?MASTER_ACCOUNT_ID],
     [release_in_service(?TEST_IN_SERVICE_NUM, DefaultAuth, SimpleHistory)
@@ -138,9 +138,9 @@ release_in_service(Num, Options, PreHistory) ->
     ].
 
 delete_in_service() ->
-    DefaultAuth = knm_number_options:default(),
+    DefaultAuth = knm_options:default(),
     MasterAuth = [{auth_by, ?MASTER_ACCOUNT_ID}],
-    MasterMDNAuth = [{auth_by, ?MASTER_ACCOUNT_ID}|knm_number_options:mdn_options()],
+    MasterMDNAuth = [{auth_by, ?MASTER_ACCOUNT_ID}|knm_options:mdn_options()],
     [delete_in_service(?TEST_IN_SERVICE_NUM, DefaultAuth)
     ,delete_in_service(?TEST_IN_SERVICE_NUM, MasterAuth)
     ,delete_in_service(?TEST_IN_SERVICE_WITH_HISTORY_NUM, DefaultAuth)

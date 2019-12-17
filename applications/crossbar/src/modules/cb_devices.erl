@@ -587,7 +587,7 @@ error_mdn_changed(Context) ->
 
 -spec check_mdn_taken(kz_term:ne_binary(), kz_term:api_binary(), cb_context:context()) -> cb_context:context().
 check_mdn_taken(MDN, DeviceId, Context) ->
-    case knm_number:get(MDN, knm_number_options:mdn_options()) of
+    case knm_number:get(MDN, knm_options:mdn_options()) of
         {'error', 'not_found'} ->
             lager:debug("endpoint mdn ~s is not taken", [MDN]),
             check_mdn_registered(DeviceId, Context);
@@ -952,7 +952,7 @@ add_mdn(MDN, Context) ->
     Options = [{'assign_to', cb_context:account_id(Context)}
               ,{'public_fields', PublicFields}
               ,{'module_name', ?CARRIER_MDN}
-               |knm_number_options:mdn_options()
+               |knm_options:mdn_options()
               ],
     case knm_number:create(MDN, Options) of
         {'error', _}=Error ->
@@ -1062,7 +1062,7 @@ maybe_remove_mdn(_DeviceId, Context) ->
 
 -spec remove_mdn(kz_term:ne_binary(), cb_context:context()) -> cb_context:context().
 remove_mdn(MDN, Context) ->
-    case knm_number:get(MDN, knm_number_options:mdn_options()) of
+    case knm_number:get(MDN, knm_options:mdn_options()) of
         {'ok', PN} ->
             IsMdnCarrier = ?CARRIER_MDN =:= knm_phone_number:module_name(PN),
             case kz_json:get_ne_value(<<"mobile">>, knm_phone_number:to_public_json(PN)) of
@@ -1072,7 +1072,7 @@ remove_mdn(MDN, Context) ->
                 Mobile ->
                     lager:debug("hard removing old mdn ~s with mobile properties ~s"
                                ,[MDN, kz_json:encode(Mobile)]),
-                    _ = knm_number:delete(MDN, knm_number_options:mdn_options()),
+                    _ = knm_number:delete(MDN, knm_options:mdn_options()),
                     Context
             end;
         {'error', _R} ->
