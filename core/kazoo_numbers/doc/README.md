@@ -71,7 +71,7 @@ These are encapsulated in the `knm_options` module, including a handy `-type` fo
 
 #### Bulk operations
 
-When you want to perform operations on a list of numbers, `knm_numbers` provides a nice way to do that, versus iterating over the list yourself.
+When you want to perform operations on a list of numbers, `knm_ops` provides a nice way to do that, versus iterating over the list yourself.
 
 
 ### Phone Numbers

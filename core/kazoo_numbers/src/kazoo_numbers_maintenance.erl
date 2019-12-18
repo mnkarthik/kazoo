@@ -201,7 +201,7 @@ convert_carrier_module_numbers(Nums, Target) ->
         'false' -> io:format("Bad carrier module: ~s\n", [Target]);
         'true' ->
             Routines = [{fun knm_phone_number:set_module_name/2, Target}],
-            Updated = knm_numbers:update(Nums, Routines),
+            Updated = knm_ops:update(Nums, Routines),
             PNs = knm_pipe:succeeded(Updated),
             Failed = knm_pipe:failed(Updated),
             TotalLength = length(Nums),
@@ -1831,7 +1831,7 @@ fix_unassign_doc(DIDs) ->
                %% No caching + bulk doc writes
               ,{'batch_run', 'true'}
               ],
-    case knm_numbers:update(DIDs, Setters, Options) of
+    case knm_ops:update(DIDs, Setters, Options) of
         %% FIXME: opaque
         #{'failed' := Map} when map_size(Map) =:= 0 -> 'ok';
         #{'failed' := Failed} ->

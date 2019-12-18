@@ -164,7 +164,7 @@ attempt_setting_e911_on_disallowed_local_number() ->
     Updates = [{fun knm_phone_number:reset_doc/2, JObj}],
     Num = ?TEST_IN_SERVICE_NUM,
     {ok, PN} = knm_number:get(Num),
-    #{Num := Error} = knm_pipe:failed(knm_numbers:update([PN], Updates, Options)),
+    #{Num := Error} = knm_pipe:failed(knm_ops:update([PN], Updates, Options)),
     [{"Verify feature is not set"
      ,?_assertEqual(undefined, knm_phone_number:feature(PN, ?FEATURE_E911))
      }
@@ -191,7 +191,7 @@ attempt_setting_e911_on_explicitly_disallowed_number() ->
     Updates = [{fun knm_phone_number:reset_doc/2, JObj}],
     Num = ?BW_EXISTING_DID,
     {ok, PN} = knm_number:get(Num),
-    #{Num := ErrorJObj} = knm_pipe:failed(knm_numbers:update([PN], Updates, Options)),
+    #{Num := ErrorJObj} = knm_pipe:failed(knm_ops:update([PN], Updates, Options)),
     [?_assertEqual(false, knm_phone_number:is_dirty(PN))
     ,{"Verify feature is not set"
      ,?_assertEqual(undefined, knm_phone_number:feature(PN, ?FEATURE_E911))
@@ -222,9 +222,9 @@ update_used_by_from_defined() ->
     Num = ?TEST_IN_SERVICE_NUM,
     MyApp = <<"my_app">>,
     {ok, PN0} = knm_number:get(Num),
-    [PN1a] = knm_pipe:succeeded(knm_numbers:update([PN0], [{fun knm_phone_number:set_used_by/2, undefined}])),
-    [PN1b] = knm_pipe:succeeded(knm_numbers:update([PN0], [{fun knm_phone_number:set_used_by/2, MyApp}])),
-    [PN2] = knm_pipe:succeeded(knm_numbers:update([PN1b], [{fun knm_phone_number:set_used_by/2, undefined}])),
+    [PN1a] = knm_pipe:succeeded(knm_ops:update([PN0], [{fun knm_phone_number:set_used_by/2, undefined}])),
+    [PN1b] = knm_pipe:succeeded(knm_ops:update([PN0], [{fun knm_phone_number:set_used_by/2, MyApp}])),
+    [PN2] = knm_pipe:succeeded(knm_ops:update([PN1b], [{fun knm_phone_number:set_used_by/2, undefined}])),
     [?_assertEqual(<<"callflow">>, knm_phone_number:used_by(PN0))
     ,?_assert(not knm_phone_number:is_dirty(PN0))
     ,?_assertEqual(undefined, knm_phone_number:used_by(PN1a))
@@ -239,9 +239,9 @@ update_used_by_from_undefined() ->
     Num = ?TEST_IN_SERVICE_MDN,
     MyApp = <<"my_app">>,
     {ok, PN0} = knm_number:get(Num),
-    [PN1a] = knm_pipe:succeeded(knm_numbers:update([PN0], [{fun knm_phone_number:set_used_by/2, undefined}])),
-    [PN1b] = knm_pipe:succeeded(knm_numbers:update([PN0], [{fun knm_phone_number:set_used_by/2, MyApp}])),
-    [PN2] = knm_pipe:succeeded(knm_numbers:update([PN1b], [{fun knm_phone_number:set_used_by/2, undefined}])),
+    [PN1a] = knm_pipe:succeeded(knm_ops:update([PN0], [{fun knm_phone_number:set_used_by/2, undefined}])),
+    [PN1b] = knm_pipe:succeeded(knm_ops:update([PN0], [{fun knm_phone_number:set_used_by/2, MyApp}])),
+    [PN2] = knm_pipe:succeeded(knm_ops:update([PN1b], [{fun knm_phone_number:set_used_by/2, undefined}])),
     [?_assertEqual(undefined, knm_phone_number:used_by(PN0))
     ,?_assert(not knm_phone_number:is_dirty(PN0))
     ,?_assertEqual(undefined, knm_phone_number:used_by(PN1a))
@@ -337,4 +337,4 @@ fix_number(PN) ->
               ,{'batch_run', 'false'}
               ],
     %% -- above is verbatim from maintenance module --
-    knm_numbers:update([PN], Routines, Options).
+    knm_ops:update([PN], Routines, Options).

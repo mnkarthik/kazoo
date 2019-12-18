@@ -58,7 +58,7 @@
 
 -define(RUN_KNM_NUMBERS_FUN(F, Num, Options)
        ,case {knm_options:dry_run(Options)
-             ,knm_numbers:F([Num], Options)
+             ,knm_ops:F([Num], Options)
              }
         of ?KNM_NUMBERS_CLAUSES(Num)
             end
@@ -66,7 +66,7 @@
 
 -define(RUN_KNM_NUMBERS_FUN_ARGS(F, Num, Arg2, Options),
         case {knm_options:dry_run(Options)
-             ,knm_numbers:F([Num], Arg2, Options)
+             ,knm_ops:F([Num], Arg2, Options)
              }
         of ?KNM_NUMBERS_CLAUSES(Num)
             end
@@ -87,7 +87,7 @@ get(Num) ->
 
 -spec get(kz_term:ne_binary(), knm_options:options()) -> return().
 get(Num, Options) ->
-    case knm_numbers:get([Num], Options) of
+    case knm_ops:get([Num], Options) of
         %% FIXME: opaque
         #{'succeeded' := [PN]} -> {'ok', PN};
         #{'failed' := M} -> {'error', hd(maps:values(M))}

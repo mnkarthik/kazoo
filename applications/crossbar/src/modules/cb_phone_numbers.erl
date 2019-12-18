@@ -984,7 +984,7 @@ numbers_action(Context, ?ACTIVATE, Numbers) ->
     Options = [{'public_fields', cb_context:req_data(Context)}
                | default_knm_options(Context)
               ],
-    knm_numbers:move(Numbers, cb_context:account_id(Context), Options);
+    knm_ops:move(Numbers, cb_context:account_id(Context), Options);
 numbers_action(Context, ?HTTP_PUT, Numbers) ->
     ReqData = cb_context:req_data(Context),
     Options = [{'assign_to', cb_context:account_id(Context)}
@@ -992,23 +992,23 @@ numbers_action(Context, ?HTTP_PUT, Numbers) ->
                | maybe_ask_for_state(kz_json:get_ne_binary_value(?PUBLIC_FIELDS_STATE, ReqData))
                ++ default_knm_options(Context)
               ],
-    knm_numbers:create(Numbers, Options);
+    knm_ops:create(Numbers, Options);
 numbers_action(Context, ?HTTP_POST, Numbers) ->
     Options = [{'assign_to', cb_context:account_id(Context)}
                | default_knm_options(Context)
               ],
     JObj = cb_context:req_data(Context),
-    knm_numbers:update(Numbers, [{fun knm_phone_number:reset_doc/2, JObj}], Options);
+    knm_ops:update(Numbers, [{fun knm_phone_number:reset_doc/2, JObj}], Options);
 numbers_action(Context, ?HTTP_PATCH, Numbers) ->
     Options = [{'assign_to', cb_context:account_id(Context)}
                | default_knm_options(Context)
               ],
     JObj = cb_context:req_data(Context),
-    knm_numbers:update(Numbers, [{fun knm_phone_number:update_doc/2, JObj}], Options);
+    knm_ops:update(Numbers, [{fun knm_phone_number:update_doc/2, JObj}], Options);
 numbers_action(Context, ?HTTP_DELETE, Numbers) ->
     Options = default_knm_options(Context),
     Releaser = pick_release_or_delete(Context, Options),
-    knm_numbers:Releaser(Numbers, Options).
+    knm_ops:Releaser(Numbers, Options).
 
 -spec pick_release_or_delete(cb_context:context(), knm_options:options()) -> 'release' | 'delete'.
 pick_release_or_delete(Context, Options) ->

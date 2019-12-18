@@ -81,7 +81,7 @@ delete_remove_services({AccountJObj, Errors}=Acc) ->
 
 -spec delete_free_numbers(delete_acc()) -> delete_acc().
 delete_free_numbers({AccountJObj, _Errors}=Acc) ->
-    _Freed = knm_numbers:free(kz_doc:id(AccountJObj)),
+    _Freed = knm_ops:free(kz_doc:id(AccountJObj)),
     lager:debug("freed account's numbers: ~p", [_Freed]),
     Acc.
 

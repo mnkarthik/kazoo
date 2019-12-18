@@ -75,12 +75,12 @@ force_outbound() ->
               ,{'assign_to', ?RESELLER_ACCOUNT_ID}
               ],
     {ok, PN1} = knm_number:create(?TEST_TELNYX_NUM, Options),
-    [PN2] = knm_pipe:succeeded(knm_numbers:update([PN1], [{fun knm_phone_number:reset_doc/2, ?J('true')}])),
-    [PN3] = knm_pipe:succeeded(knm_numbers:update([PN1], [{fun knm_phone_number:update_doc/2, ?J(<<"blabla">>)}])),
-    [PN4] = knm_pipe:succeeded(knm_numbers:update([PN2], [{fun knm_phone_number:reset_doc/2, ?J('undefined')}])),
-    [PN5] = knm_pipe:succeeded(knm_numbers:update([PN4], [{fun knm_phone_number:update_doc/2, ?J(<<"false">>)}])),
-    [PN6] = knm_pipe:succeeded(knm_numbers:update([PN3], [{fun knm_phone_number:reset_doc/2, ?J('false')}])),
-    [PN7] = knm_pipe:succeeded(knm_numbers:update([undirty(PN6)], [{fun knm_phone_number:reset_doc/2, ?J('false')}])),
+    [PN2] = knm_pipe:succeeded(knm_ops:update([PN1], [{fun knm_phone_number:reset_doc/2, ?J('true')}])),
+    [PN3] = knm_pipe:succeeded(knm_ops:update([PN1], [{fun knm_phone_number:update_doc/2, ?J(<<"blabla">>)}])),
+    [PN4] = knm_pipe:succeeded(knm_ops:update([PN2], [{fun knm_phone_number:reset_doc/2, ?J('undefined')}])),
+    [PN5] = knm_pipe:succeeded(knm_ops:update([PN4], [{fun knm_phone_number:update_doc/2, ?J(<<"false">>)}])),
+    [PN6] = knm_pipe:succeeded(knm_ops:update([PN3], [{fun knm_phone_number:reset_doc/2, ?J('false')}])),
+    [PN7] = knm_pipe:succeeded(knm_ops:update([undirty(PN6)], [{fun knm_phone_number:reset_doc/2, ?J('false')}])),
     [?_assert(is_dirty(PN1))
     ,{"Verify private feature", ?_assertEqual('undefined', pvt_feature(PN1))}
     ,{"Verify public feature", ?_assertEqual('undefined', pub_feature(PN1))}

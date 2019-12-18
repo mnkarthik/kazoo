@@ -38,7 +38,7 @@
 
 -spec cleanup_numbers(pqc_cb_api:state(), kz_term:ne_binaries()) -> 'ok'.
 cleanup_numbers(_API, Numbers) ->
-    _ = knm_numbers:delete(Numbers, [{'auth_by',  <<"system">>}]),
+    _ = knm_ops:delete(Numbers, [{'auth_by',  <<"system">>}]),
     'ok'.
 
 -spec list_number(pqc_cb_api:state(), kz_term:api_ne_binary(), kz_term:ne_binary()) -> pqc_cb_api:response().

@@ -13,7 +13,7 @@
 %%%
 %%% @end
 %%%-----------------------------------------------------------------------------
--module(knm_numbers).
+-module(knm_ops).
 
 -export([assigned_to/1
         ,prev_assigned_to/1

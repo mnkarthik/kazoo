@@ -594,7 +594,7 @@ transition_numbers(PortReq) ->
               ],
     lager:debug("account ~p creating local numbers for port ~s", [AccountId, PortReqId]),
     Numbers = kz_json:get_keys(kzd_port_requests:numbers(PortReq)),
-    case knm_numbers:create(Numbers, Options) of
+    case knm_ops:create(Numbers, Options) of
         %% FIXME: opaque
         #{'failed' := Failed} when map_size(Failed) =:= 0 ->
             lager:debug("all numbers ported, removing from port request"),
@@ -641,7 +641,7 @@ reconcile_app_used_by(Numbers, JObj) ->
       fun({App, Nums}) ->
               case Nums of
                   [] -> 'ok';
-                  Nums -> knm_numbers:assign_to_app(Nums, App)
+                  Nums -> knm_ops:assign_to_app(Nums, App)
               end
       end
      , NumAppUsage
@@ -675,7 +675,7 @@ get_dids_for_app(AccountDb, Numbers, View) ->
 
 -spec numbers_not_in_account_nor_in_service(kz_term:ne_binary(), kz_term:ne_binaries()) -> kz_term:ne_binaries().
 numbers_not_in_account_nor_in_service(AccountId, Nums) ->
-    Collection = knm_numbers:get(Nums),
+    Collection = knm_ops:get(Nums),
     Failed = knm_pipe:failed(Collection),
     PNs = knm_pipe:succeeded(Collection),
     [knm_phone_number:number(PN)

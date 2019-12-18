@@ -163,7 +163,7 @@ crawl_number_db(Db) ->
             lager:debug("failed to crawl number db ~s: ~p", [Db, _E]);
         {ok, JObjs} ->
             lager:debug("starting to crawl '~s'", [Db]),
-            _ = knm_pipe:pipe(knm_numbers:from_jobjs(JObjs)
+            _ = knm_pipe:pipe(knm_ops:from_jobjs(JObjs)
                              ,[fun maybe_edit/1
                               ,fun knm_phone_number:save/1
                               ]),

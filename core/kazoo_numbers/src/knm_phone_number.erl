@@ -350,7 +350,7 @@ log_why_not_to_save('false', _Num) ->
     lager:debug("deleted, skip saving ~s", [_Num]).
 
 %%------------------------------------------------------------------------------
-%% @doc To call only from knm_numbers:delete/2 (only for sysadmins).
+%% @doc To call only from knm_ops:delete/2 (only for sysadmins).
 %% @end
 %%------------------------------------------------------------------------------
 -spec delete(knm_pipe:collection()) -> knm_pipe:collection().

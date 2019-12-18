@@ -363,7 +363,7 @@ maybe_reconcile_numbers(Context) ->
             Options = [{'assign_to', cb_context:account_id(Context)}
                       ,{'dry_run', not cb_context:accepting_charges(Context)}
                       ],
-            _ = knm_numbers:reconcile(NewNumbers, Options),
+            _ = knm_ops:reconcile(NewNumbers, Options),
             Context
     end.
 

@@ -396,7 +396,7 @@ list_numbers(AuthBy, E164s) ->
     Options = [{'auth_by', AuthBy}
               ,{'batch_run', 'true'}
               ],
-    Collection = knm_numbers:get(E164s, Options),
+    Collection = knm_ops:get(E164s, Options),
     PNs = knm_pipe:succeeded(Collection),
     Failed = knm_pipe:failed(Collection),
     maps:fold(fun list_bad_rows/3, [], Failed)
