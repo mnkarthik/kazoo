@@ -15,10 +15,6 @@
 %%%-----------------------------------------------------------------------------
 -module(knm_ops).
 
--export([assigned_to/1
-        ,prev_assigned_to/1
-        ]).
-
 -export([get/1, get/2
         ,create/2
         ,move/2, move/3
@@ -35,42 +31,6 @@
 -include("knm.hrl").
 
 %%------------------------------------------------------------------------------
-%% @doc Set of numbers' `assigned_to' fields.
-%% @end
-%%------------------------------------------------------------------------------
--spec assigned_to(knm_pipe:collection()) -> kz_term:api_ne_binary().
-%% FIXME: opaque
-assigned_to(#{'todo' := PNs}) ->
-    F = fun (PN, SetAcc) ->
-                case knm_phone_number:assigned_to(PN) of
-                    'undefined' -> SetAcc;
-                    ?MATCH_ACCOUNT_RAW(AccountId) -> sets:add_element(AccountId, SetAcc)
-                end
-        end,
-    case sets:to_list(lists:foldl(F, sets:new(), PNs)) of
-        [] -> 'undefined';
-        [AccountId] -> AccountId
-    end.
-
-%%------------------------------------------------------------------------------
-%% @doc Set of numbers' `prev_assigned_to' fields.
-%% @end
-%%------------------------------------------------------------------------------
--spec prev_assigned_to(knm_pipe:collection()) -> kz_term:api_ne_binary().
-%% FIXME: opaque
-prev_assigned_to(#{'todo' := PNs}) ->
-    F = fun (PN, SetAcc) ->
-                case knm_phone_number:prev_assigned_to(PN) of
-                    'undefined' -> SetAcc;
-                    ?MATCH_ACCOUNT_RAW(AccountId) -> sets:add_element(AccountId, SetAcc)
-                end
-        end,
-    case sets:to_list(lists:foldl(F, sets:new(), PNs)) of
-        [] -> 'undefined';
-        [AccountId] -> AccountId
-    end.
-
-%%------------------------------------------------------------------------------
 %% @doc Attempts to get numbers from DB.
 %%
 %% <div class="notice">Each number in `Nums' has to be normalized.</div>
@@ -85,17 +45,10 @@ get(Nums, Options) -> do_get(Nums, Options).
 -spec do_get(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 do_get(Nums, Options) ->
     {Yes, No} = knm_converters:are_reconcilable(Nums),
-    knm_pipe:pipe(knm_pipe:new(Options, Yes, No)
-                 ,[fun knm_phone_number:fetch/1  %% fetch/1 puts PNs in "succeeded"!
-                  ]).
-
--spec do_get_pn(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
-do_get_pn(Nums, Options) ->
-    {Yes, No} = knm_converters:are_reconcilable(Nums),
     knm_pipe:do(fun knm_phone_number:fetch/1, knm_pipe:new(Options, Yes, No)).
 
--spec do_get_pn(kz_term:ne_binaries(), knm_options:options(), knm_pipe:reason()) -> knm_pipe:collection().
-do_get_pn(Nums, Options, Error) ->
+-spec do_get(kz_term:ne_binaries(), knm_options:options(), knm_pipe:reason()) -> knm_pipe:collection().
+do_get(Nums, Options, Error) ->
     {Yes, No} = knm_converters:are_reconcilable(Nums),
     knm_pipe:do(fun knm_phone_number:fetch/1, knm_pipe:new(Options, Yes, No, Error)).
 
@@ -127,9 +80,9 @@ from_jobjs(JObjs) ->
 -spec create(kz_term:ne_binaries(), knm_options:options()) -> knm_pioe:collection().
 %% FIXME: opaque
 create(Nums, Options) ->
-    Col0 = knm_pipe:pipe(do_get_pn(Nums
-                                  ,?OPTIONS_FOR_LOAD(Nums, props:delete('state', Options))
-                                  )
+    Col0 = knm_pipe:pipe(do_get(Nums
+                               ,?OPTIONS_FOR_LOAD(Nums, props:delete('state', Options))
+                               )
                         ,[fun fail_if_assign_to_is_not_an_account_id/1]
                         ),
     {Col1, NotFounds} = take_not_founds(Col0),
@@ -188,7 +141,7 @@ update(Nums, Routines) ->
 %% FIXME: first argument could be ne_binaries or knm_phone_numbers
 update([?NE_BINARY|_]=Nums, Routines, Options) ->
     Reason = 'not_reconcilable',  %% FIXME: unify to atom OR knm_error.
-    do_update(do_get_pn(Nums, Options, Reason), Routines);
+    do_update(do_get(Nums, Options, Reason), Routines);
 update(Ns, Updates, Options) ->
     Routines = [{fun knm_phone_number:set_dirty/2, 'false'}
                 | knm_options:to_phone_number_setters(Options)
@@ -203,7 +156,7 @@ update(Ns, Updates, Options) ->
 -spec update(kz_term:ne_binaries(), knm_phone_number:set_functions(), knm_options:options()) -> knm_pipe:collection().
 update(Nums, Routines, Options) ->
     Reason = 'not_reconcilable',  %% FIXME: unify to atom OR knm_error.
-    do_update(do_get_pn(Nums, Options, Reason), Routines).
+    do_update(do_get(Nums, Options, Reason), Routines).
 
 -endif.
 
@@ -224,7 +177,7 @@ release(Nums) ->
 
 -spec release(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 release(Nums, Options) ->
-    knm_pipe:pipe(do_get_pn(Nums, Options)
+    knm_pipe:pipe(do_get(Nums, Options)
                  ,[fun try_release/1
                   ,fun knm_providers:delete/1
                   ,fun unwind_maybe_disconnect/1
@@ -270,7 +223,7 @@ assign_to_app(Nums, App) ->
 -spec assign_to_app(kz_term:ne_binaries(), kz_term:api_ne_binary(), knm_options:options()) -> knm_pipe:collection().
 assign_to_app(Nums, App, Options) ->
     Setters = [{fun knm_phone_number:set_used_by/2, App}],
-    knm_pipe:pipe(do_get_pn(Nums, Options)
+    knm_pipe:pipe(do_get(Nums, Options)
                  ,[fun (T) -> knm_phone_number:setters(T, Setters) end
                   ,fun knm_phone_number:save/1
                   ]).
