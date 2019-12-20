@@ -88,7 +88,6 @@ mdn_transitions() ->
     DefaultOptions = [{assign_to, ?MASTER_ACCOUNT_ID} | knm_options:mdn_options()],
     {ok, PN1} = knm_number:move(Num, ?MASTER_ACCOUNT_ID, DefaultOptions),
     {ok, PN2} = knm_number:release(Num, DefaultOptions),
-    {ok, PN3} = knm_number:reconcile(Num, DefaultOptions),
     {ok, PN4} = knm_number:create(?TEST_CREATE_NUM, [{module_name,?CARRIER_MDN}|DefaultOptions]),
     [?_assert(knm_phone_number:is_dirty(PN1))
     ,{"Verify MDN can move from in_service to in_service"
@@ -97,10 +96,6 @@ mdn_transitions() ->
     ,?_assert(knm_phone_number:is_dirty(PN2))
     ,{"Verify releasing MDN results in deletion"
      ,?_assertEqual(?NUMBER_STATE_DELETED, knm_phone_number:state(PN2))
-     }
-    ,?_assert(knm_phone_number:is_dirty(PN3))
-    ,{"Verify MDN can reconcile from in_service to in_service"
-     ,?_assertEqual(?NUMBER_STATE_IN_SERVICE, knm_phone_number:state(PN3))
      }
     ,{"Verify MDN cannot be reserved"
      ,?_assertMatch({error,_}, knm_number:reserve(Num, knm_options:default()))

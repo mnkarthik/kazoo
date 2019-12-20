@@ -29,7 +29,6 @@ db_dependant() ->
     ,update()
     ,attempt_setting_e911_on_disallowed_number()
     ,delete()
-    ,reconcile()
     ,reserve()
     ,assign_to_app()
     ,release()
@@ -193,28 +192,6 @@ delete() ->
      ,?_assertEqual(?NUMBER_STATE_DELETED, knm_phone_number:state(n_x(1, Ret)))
      }
     ,?_assert(knm_phone_number:is_dirty(n_x(1, Ret)))
-    ].
-
-
-reconcile() ->
-    Ret0 = knm_ops:reconcile([?NOT_NUM], []),
-    Ret1 = knm_ops:reconcile([?NOT_NUM, ?TEST_AVAILABLE_NUM], knm_options:default()),
-    Ret2 = knm_ops:reconcile([?NOT_NUM, ?TEST_AVAILABLE_NUM]
-                                ,[{assign_to, ?RESELLER_ACCOUNT_ID} | knm_options:default()]),
-    [?_assertEqual(#{?NOT_NUM => 'not_reconcilable'}, maps:get('failed', Ret0))
-    ,?_assertEqual([], maps:get('succeeded', Ret0))
-    ,?_assertEqual(#{?NOT_NUM => 'not_reconcilable', ?TEST_AVAILABLE_NUM => error_assign_to_undefined()}
-                  ,maps:get('failed', Ret1))
-    ,?_assertEqual([], maps:get('succeeded', Ret1))
-    ,?_assertEqual(#{?NOT_NUM => 'not_reconcilable'}, maps:get('failed', Ret2))
-    ,?_assertMatch([_], maps:get('succeeded', Ret2))
-    ,?_assert(knm_phone_number:is_dirty(n_x(1, Ret2)))
-    ,{"verify number is now in service"
-     ,?_assertEqual(?NUMBER_STATE_IN_SERVICE, knm_phone_number:state(n_x(1, Ret2)))
-     }
-    ,{"verify number is indeed owned by account"
-     ,?_assertEqual(?RESELLER_ACCOUNT_ID, knm_phone_number:assigned_to(n_x(1, Ret2)))
-     }
     ].
 
 

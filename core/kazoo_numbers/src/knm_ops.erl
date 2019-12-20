@@ -25,7 +25,6 @@
         ,update/2, update/3
         ,release/1, release/2
         ,delete/2
-        ,reconcile/2
         ,reserve/2
 
         ,assign_to_app/2, assign_to_app/3
@@ -250,22 +249,6 @@ delete(Nums, Options) ->
     end.
 
 %%------------------------------------------------------------------------------
-%% @doc Note: option `assign_to' needs to be set.
-%% @end
-%%------------------------------------------------------------------------------
--spec reconcile(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
-reconcile(Nums, Options0) ->
-    Options = [{'auth_by', ?KNM_DEFAULT_AUTH_BY} | Options0],
-    T0 = knm_pipe:pipe(do_get(Nums, Options)
-                      ,[fun fail_if_assign_to_is_not_an_account_id/1]
-                      ),
-    {T1, NotFounds} = take_not_founds(T0),
-    %% Ensures state to be IN_SERVICE
-    Ta = do_move_not_founds(NotFounds, Options),
-    Tb = knm_pipe:do(fun (T) -> reconcile_number(T, Options) end, T1),
-    knm_pipe:merge_okkos(Ta, Tb).
-
-%%------------------------------------------------------------------------------
 %% @doc Fetches then transitions existing numbers to the reserved state.
 %% @end
 %%------------------------------------------------------------------------------
@@ -315,20 +298,6 @@ update_for_create(T=#{'todo' := _PNs, 'options' := Options}) ->
                 props:delete('state', Options)
                ),
     knm_phone_number:setters(T, Updates).
-
--spec update_for_reconcile(knm_pipe:collection(), knm_options:options()) -> knm_pipe:collection().
-update_for_reconcile(T, Options) ->
-    S = [{fun knm_phone_number:set_assigned_to/2, knm_options:assign_to(Options)}
-        ,{fun knm_phone_number:set_auth_by/2, knm_options:auth_by(Options)}
-        ,{fun knm_phone_number:update_doc/2, knm_options:public_fields(Options)}
-        ,{fun knm_phone_number:set_state/2, ?NUMBER_STATE_IN_SERVICE}
-         | case props:is_defined('module_name', Options) of
-               'false' -> [];
-               'true' ->
-                   [{fun knm_phone_number:set_module_name/2, knm_options:module_name(Options)}]
-           end
-        ],
-    knm_phone_number:setters(T, S).
 
 -spec save_phone_numbers(knm_pipe:collection()) -> knm_pipe:collection().
 save_phone_numbers(T) ->
@@ -503,16 +472,6 @@ services_group_number(PhoneNumber, AssignedTo, PrevAssignedTo) ->
     ,{[PrevAssignedTo, <<"current">>], CurrentJObj}
     ].
 -endif.
-
-reconcile_number(T0, Options) ->
-    F1 = fun (T) -> update_for_reconcile(T, Options) end,
-    %%FIXME: create a pipe_in_wrap that does not create the superfluous Numbers.
-    knm_pipe:pipe(knm_pipe:do(F1, T0), [fun save_phone_numbers/1]).
-
-do_move_not_founds(Nums, Options) ->
-    knm_pipe:pipe(knm_pipe:new([{'state', ?NUMBER_STATE_IN_SERVICE} | Options], Nums)
-                 ,[fun knm_phone_number:new/1
-                  ]).
 
 %% FIXME: opaque
 -spec discover(knm_pipe:collection()) -> knm_pipe:collection().

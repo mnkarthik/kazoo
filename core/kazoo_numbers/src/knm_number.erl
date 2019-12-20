@@ -20,7 +20,6 @@
         ,delete/2
         ,assign_to_app/2, assign_to_app/3
         ,lookup_account/1
-        ,reconcile/2
         ,reserve/2
         ]).
 
@@ -138,14 +137,6 @@ update(Num, Routines) ->
 -spec update(kz_term:ne_binary(), knm_phone_number:set_functions(), knm_options:options()) -> return().
 update(Num, Routines, Options) ->
     ?RUN_KNM_NUMBERS_FUN_ARGS('update', Num, Routines, Options).
-
-%%------------------------------------------------------------------------------
-%% @doc Note: option 'assign_to' needs to be set.
-%% @end
-%%------------------------------------------------------------------------------
--spec reconcile(kz_term:ne_binary(), knm_options:options()) -> return().
-reconcile(DID, Options) ->
-    ?RUN_KNM_NUMBERS_FUN('reconcile', DID, Options).
 
 %%------------------------------------------------------------------------------
 %% @doc
