@@ -29,11 +29,6 @@
         ,reserve/2
 
         ,assign_to_app/2, assign_to_app/3
-
-        ,free/1
-        ,emergency_enabled/1
-
-        ,account_listing/1
         ]).
 
 -export([from_jobjs/1]).
@@ -296,60 +291,6 @@ assign_to_app(Nums, App, Options) ->
                  ,[fun (T) -> knm_phone_number:setters(T, Setters) end
                   ,fun knm_phone_number:save/1
                   ]).
-
-%%------------------------------------------------------------------------------
-%% @doc Release all of an account's numbers
-%% @end
-%%------------------------------------------------------------------------------
--spec free(kz_term:ne_binary()) -> 'ok'.
-%% FIXME: opaque
-free(Account=?NE_BINARY) ->
-    AccountDb = kzs_util:format_account_db(Account),
-    {Numbers, _NumbersData} = lists:unzip(account_listing(AccountDb)),
-    Collection = release(Numbers),
-    Ns = knm_pipe:succeeded(Collection),
-    Failed = knm_pipe:failed(Collection),
-    lager:debug("successfully released ~p from ~s", [[knm_phone_number:number(N) || N <- Ns], Account]),
-    lists:foreach(fun ({Num, R}) ->
-                          lager:error("error when releasing ~s from ~s: ~p", [Num, Account, R])
-                  end
-                 ,maps:to_list(Failed)
-                 ).
-
-%%------------------------------------------------------------------------------
-%% @doc Find an account's phone numbers that have emergency services enabled
-%% @end
-%%------------------------------------------------------------------------------
--spec emergency_enabled(kz_term:ne_binary()) -> kz_term:ne_binaries().
-emergency_enabled(AccountId=?MATCH_ACCOUNT_RAW(_)) ->
-    AccountDb = kzs_util:format_account_db(AccountId),
-    [Num || {Num, JObj} <- account_listing(AccountDb),
-            Features <- [kz_json:get_list_value(<<"features">>, JObj, [])],
-            lists:member(?FEATURE_E911, Features)
-    ].
-
-%%------------------------------------------------------------------------------
-%% @doc List an account's phone numbers and statuses.
-%% Does not go through sub accounts.
-%% @end
-%%------------------------------------------------------------------------------
--spec account_listing(kz_term:ne_binary()) -> [{kz_term:ne_binary(), kz_json:object()}].
-account_listing(AccountDb=?MATCH_ACCOUNT_ENCODED(_,_,_)) ->
-    case kz_datamgr:get_results(AccountDb, <<"phone_numbers/crossbar_listing">>) of
-        {'ok', []} ->
-            lager:debug("account ~s holds no numbers", [AccountDb]),
-            [];
-        {'ok', JObjs} ->
-            [{kz_doc:id(JObj), kz_json:get_value(<<"value">>, JObj)}
-             || JObj <- JObjs
-            ];
-        {'error', 'not_found'=_R} ->
-            lager:error("error listing numbers for ~s: ~p", [AccountDb, _R]),
-            [];
-        {'error', R} ->
-            lager:error("error listing numbers for ~s: ~p", [AccountDb, R]),
-            throw(R)
-    end.
 
 -spec take_not_founds(knm_pipe:collection()) -> {knm_pipe:collection(), kz_term:ne_binaries()}.
 take_not_founds(Collection) ->

@@ -543,7 +543,7 @@ find_emergency_number(OffnetReq) ->
 ensure_valid_emergency_number(OffnetReq) ->
     AccountId = kapi_offnet_resource:account_id(OffnetReq),
     lager:debug("ensuring emergency caller is valid for account ~s", [AccountId]),
-    Numbers = knm_ops:emergency_enabled(AccountId),
+    Numbers = knm_numbers:emergency_enabled(AccountId),
     Emergency = bridge_emergency_cid_number(OffnetReq),
     Outbound = bridge_outbound_cid_number(OffnetReq),
     case {lists:member(Emergency, Numbers), lists:member(Outbound, Numbers)} of
