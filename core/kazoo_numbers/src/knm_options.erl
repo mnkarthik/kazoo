@@ -39,6 +39,10 @@
         ,transfer_media_id/1
         ]).
 
+-export([is_defined/2
+        ,are_defined/2
+        ]).
+
 -include("knm.hrl").
 
 -type crossbar_option() :: {'services', kz_services:services()} |
@@ -82,6 +86,32 @@ default() ->
     ,{'mdn_run', 'false'}
     ].
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec is_defined(options(), fun() | {fun(), any()}) -> boolean().
+is_defined(Options, {Getter, Default}) when is_function(Getter, 2) ->
+    case Getter(Options) of
+        Default -> 'true';
+        _ -> 'false'
+    end;
+is_defined(Options, Getter) when is_function(Getter, 1) ->
+    case Getter(Options) of
+        'undefined' -> 'false';
+        [] -> 'false';
+        <<>> -> 'false';
+        _ -> 'true'
+    end.
+
+-spec are_defined(options(), [fun() | {fun(), any()}]) -> boolean().
+are_defined(Options, Getters) ->
+    lists:all(fun(Getter) -> is_defined(Options, Getter) end, Getters).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
 -spec mdn_options() -> options().
 mdn_options() ->
     props:set_value('mdn_run', 'true', default()).
