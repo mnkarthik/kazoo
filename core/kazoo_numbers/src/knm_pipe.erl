@@ -25,10 +25,11 @@
         ,pipe/2
         ]).
 
-%% Monad Utilities
+%% Utilities
 -export([attempt/2
         ,new/2, new/3, new/4
         ,merge_okkos/1, merge_okkos/2
+        ,setters/2
         ,to_json/1
         ]).
 
@@ -60,6 +61,10 @@
 
 -type applier() :: fun((collection()) -> collection()).
 -type appliers() :: [applier()].
+-type setter_fun() :: {fun((collection(), Value) -> collection()), Value}.
+-type setter_funs() :: [setter_fun()
+                        | {fun((collection(), set_failed(), reason()) -> collection()), set_failed(), reason()}
+                       ].
 %% }}}
 
 -export_type([collection/0
@@ -84,16 +89,19 @@ failed(#{'failed' := Failed}) -> Failed.
 set_failed(Collection, Failed) -> Collection#{'failed' => Failed}.
 
 -spec set_failed(collection(), set_failed(), reason()) -> collection().
-set_failed(Collection, <<Num/binary>>, Reason) ->
+set_failed(#{'failed' := FailedAcc}=Collection, <<Num/binary>>, Reason) ->
     lager:debug("number ~s error: ~p", [Num, Reason]),
-    FailedAcc = maps:get('failed', Collection),
     Collection#{'failed' => FailedAcc#{Num => Reason}};
-set_failed(Collection0, Nums, Reason) when is_list(Nums) ->
-    F = fun (Num, ColAcc) -> set_failed(ColAcc, Num, Reason) end,
-    lists:foldl(F, Collection0, Nums);
+set_failed(#{'failed' := FailedAcc}=Collection, Things, Reason) when is_list(Things) ->
+    lager:debug("~b numbers failed with reason ~p", [length(Things), Reason]),
+    F = fun (<<Num/binary>>, Acc) -> Acc#{Num => Reason};
+            (PN            , Acc) -> Acc#{knm_phone_number:number(PN) => Reason}
+        end,
+    NewFailed = lists:foldl(F, #{}, Things),
+    Collection#{'failed' => maps:merge(FailedAcc, NewFailed)};
 set_failed(Collection, PN, Reason) ->
     Num = knm_phone_number:number(PN),
-    lager:debug("number ~s state: ~s", [Num, knm_phone_number:state(PN)]),
+    %% lager:debug("number ~s state: ~s", [Num, knm_phone_number:state(PN)]),
     set_failed(Collection, Num, Reason).
 
 %%------------------------------------------------------------------------------
@@ -148,8 +156,23 @@ add_succeeded(Collection=#{'succeeded' := Succeeded}, Numbers) when is_list(Numb
     Collection#{'succeeded' => Numbers ++ Succeeded}.
 
 %%%=============================================================================
-%%% Internal functions
+%%% Other functions
 %%%=============================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec setters(collection(), setter_funs()) -> collection().
+setters(Collection, Routines) ->
+    lists:foldl(fun({Setter, Value}, ColAcc) ->
+                        Setter(ColAcc, Value);
+                   ({FailedSetter, SetFailed, Reason}, ColAcc) ->
+                        FailedSetter(ColAcc, SetFailed, Reason)
+                end
+               ,Collection
+               ,Routines
+               ).
 
 %%------------------------------------------------------------------------------
 %% @doc

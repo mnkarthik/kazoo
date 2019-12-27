@@ -49,10 +49,13 @@ state_for_create(Options) ->
         {_, _, ?CARRIER_MDN} -> ?NUMBER_STATE_IN_SERVICE;
         {State, _, _} ->
             AuthBy = knm_options:auth_by(Options),
-            lists:member(State, allowed_creation_states(Options, AuthBy))
-                orelse knm_errors:unauthorized(),
-            lager:debug("allowing picking state ~s for ~s", [State, AuthBy]),
-            State
+            kz_either:cata(kz_either:from_maybe(lists:member(State, allowed_creation_states(Options, AuthBy)))
+                          ,fun({'error', 'false'}) -> {'error', 'unauthorized'} end
+                          ,fun({'ok', 'true'}) ->
+                                   lager:debug("allowing picking state ~s for ~s", [State, AuthBy]),
+                                   State
+                           end
+                          )
     end.
 
 %%------------------------------------------------------------------------------
