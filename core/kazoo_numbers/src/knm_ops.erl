@@ -77,34 +77,46 @@ from_jobjs(JObjs) ->
 %% attempt to create them with state `in_service'.</div>
 %% @end
 %%------------------------------------------------------------------------------
--spec create(kz_term:ne_binaries(), knm_options:options()) -> knm_pioe:collection().
-%% FIXME: opaque
-create(Nums, Options) ->
-    Col0 = knm_pipe:pipe(do_get(Nums
-                               ,?OPTIONS_FOR_LOAD(Nums, props:delete('state', Options))
-                               )
-                        ,[fun fail_if_assign_to_is_not_an_account_id/1]
-                        ),
+-spec create(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
+create(Nums, Opts0) ->
+    kz_either:catar(knm_lib:ensure_can_create(Opts0), fun(Options) -> do_create(Nums, Options) end).
+
+-spec do_create(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
+do_create(Nums, Options) ->
+    ColGet = do_get(Nums, ?OPTIONS_FOR_LOAD(Nums, props:delete('state', Options))),
+    Col0 = knm_pipe:pipe(knm_pipe:set_options(ColGet, Options)
+                        ,[fun knm_lib:ensure_can_load_to_create/1
+                         ,fun update_for_create/1
+                         ]),
     {Col1, NotFounds} = take_not_founds(Col0),
-    case {knm_pipe:succeeded(Col1), NotFounds} of
-        {[], []} -> Col0;
-        {_, NotFounds} ->
-            try knm_lib:state_for_create(Options) of
-                ToState ->
-                    lager:debug("picked state ~s for ~s for ~p", [ToState, knm_options:assign_to(Options), Nums]),
-                    NewOptions = [{'state', ToState} | Options],
-                    knm_pipe:pipe(maybe_create(NotFounds, knm_pipe:set_options(Col1, NewOptions))
-                                 ,[fun knm_states:to_options_state/1
-                                  ,fun save_numbers/1
-                                  ])
-            catch 'throw':{'error', 'unauthorized'} ->
-                    Reason = knm_errors:to_json('unauthorized', 'undefined', 'state_for_create'),
-                    F = fun (ColAcc=#{'todo' := PNs}) ->
-                                knm_pipe:set_failed(ColAcc, [knm_phone_number:number(PN) || PN <- PNs], Reason)
-                        end,
-                    knm_pipe:do(F, knm_pipe:set_failed(Col1, NotFounds, Reason))
-            end
+    Col2 = lists:foldl(fun create_new_numbers/2, Col1, NotFounds),
+    knm_pipe:pipe(Col2
+                 ,[fun knm_states:to_options_state/1
+                  ,fun save_numbers/1
+                  ]).
+
+-spec create_new_numbers(kz_term:ne_binary(), knm_pipe:collection()) -> knm_pipe:collection().
+create_new_numbers(Num, T) ->
+    Options = knm_pipe:options(T),
+    %% FIXME: move setting success and failed to the function itself
+    %% and update the tests
+    try knm_lib:ensure_number_is_not_porting(Num, Options) of
+        'true' ->
+            PN = knm_phone_number:from_number_with_options(Num, Options),
+            knm_pipe:add_success(T, PN)
+    catch
+        'throw':{'error', Reason, Num} ->
+            Reason = knm_errors:to_json(Reason, Num),
+            knm_pipe:set_failed(T, Num, Reason)
     end.
+
+-spec update_for_create(knm_pipe:collection()) -> knm_pipe:collection().
+update_for_create(Collection) ->
+    Options = knm_pipe:options(Collection),
+    Updates = knm_options:to_phone_number_setters(
+                props:delete('state', Options)
+               ),
+    knm_phone_number:setters(Collection, Updates).
 
 -spec take_not_founds(knm_pipe:collection()) -> {knm_pipe:collection(), kz_term:ne_binaries()}.
 take_not_founds(Collection) ->
@@ -113,31 +125,6 @@ take_not_founds(Collection) ->
     {NumsNotFound, NewFailed} = lists:partition(F, maps:to_list(Failed)),
     Nums = [Num || {Num, 'not_found'} <- NumsNotFound],
     {knm_pipe:set_failed(Collection, maps:from_list(NewFailed)), Nums}.
-
--spec maybe_create(kz_term:ne_binaries(), knm_pipe:collection()) -> knm_pipe:collection().
-maybe_create(NotFounds, T) ->
-    Ta = knm_pipe:do(fun knm_lib:ensure_can_create/1, knm_pipe:new(knm_pipe:options(T), NotFounds)),
-    Tb = knm_pipe:pipe(T, [fun knm_lib:ensure_can_load_to_create/1
-                          ,fun update_for_create/1
-                          ]),
-    knm_pipe:merge_okkos(Ta, Tb).
-
--spec update_for_create(knm_pipe:collection()) -> knm_pipe:collection().
-%% FIXME: opaque
-update_for_create(T=#{'todo' := _PNs, 'options' := Options}) ->
-    Updates = knm_options:to_phone_number_setters(
-                props:delete('state', Options)
-               ),
-    knm_phone_number:setters(T, Updates).
-
-%% set_errors(Collection, ReasonJObj) ->
-%%     set_errors(Collection, ReasonJObj, knm_pipe:todo(Collection)).
-%%
-%% set_errors(Collection, ReasonJObj, PNorNums) ->
-%%     Setters = [{fun knm_pipe:set_todo/2, []}
-%%               ,{fun knm_pipe:set_failed/3, PNorNums, ReasonJObj}
-%%               ],
-%%     knm_pipe:setters(Collection, Setters).
 
 %%------------------------------------------------------------------------------
 %% @doc

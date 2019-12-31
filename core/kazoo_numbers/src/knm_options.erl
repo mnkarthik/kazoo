@@ -176,7 +176,7 @@ assign_to(Options, Default) ->
 set_assign_to(Options, AssignTo) ->
     props:set_value('assign_to', AssignTo, Options).
 
--spec auth_by(options()) -> kz_term:api_binary().
+-spec auth_by(options()) -> kz_term:api_ne_binary().
 auth_by(Options) ->
     auth_by(Options, 'undefined').
 

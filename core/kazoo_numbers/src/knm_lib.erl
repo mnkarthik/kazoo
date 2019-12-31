@@ -11,8 +11,10 @@
 %%%-----------------------------------------------------------------------------
 -module(knm_lib).
 
--export([ensure_can_create/1
+-export([ensure_assign_to_option/1
+        ,ensure_can_create/1
         ,ensure_can_load_to_create/1
+        ,ensure_number_is_not_porting/2
         ,state_for_create/1
         ,allowed_creation_states/1, allowed_creation_states/2
         ]).
@@ -37,153 +39,60 @@
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec state_for_create(knm_options:options()) -> kz_term:ne_binary().
-state_for_create(Options) ->
-    case {knm_options:state(Options, ?NUMBER_STATE_IN_SERVICE)
-         ,knm_options:ported_in(Options)
-         ,knm_options:module_name(Options)
-         }
-    of
-        {?NUMBER_STATE_PORT_IN=PortIn, _, _} -> PortIn;
-        {_, 'true', _} -> ?NUMBER_STATE_IN_SERVICE;
-        {_, _, ?CARRIER_MDN} -> ?NUMBER_STATE_IN_SERVICE;
-        {State, _, _} ->
-            AuthBy = knm_options:auth_by(Options),
-            kz_either:cata(kz_either:from_maybe(lists:member(State, allowed_creation_states(Options, AuthBy)))
-                          ,fun({'error', 'false'}) -> {'error', 'unauthorized'} end
-                          ,fun({'ok', 'true'}) ->
-                                   lager:debug("allowing picking state ~s for ~s", [State, AuthBy]),
-                                   State
-                           end
-                          )
-    end.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
--spec allowed_creation_states(kz_term:api_ne_binary()) -> kz_term:ne_binaries().
-allowed_creation_states(AuthBy) ->
-    allowed_creation_states([], AuthBy).
-
--spec allowed_creation_states(knm_options:options(), kz_term:api_ne_binary()) -> kz_term:ne_binaries().
-allowed_creation_states(_, 'undefined') -> [];
-allowed_creation_states(Options, AuthBy) ->
-    case {knm_phone_number:is_admin(AuthBy)
-         ,allow_number_additions(Options, AuthBy)
-         }
-    of
-        {'true', _} ->
-            [?NUMBER_STATE_AGING
-            ,?NUMBER_STATE_AVAILABLE
-            ,?NUMBER_STATE_IN_SERVICE
-            ,?NUMBER_STATE_PORT_IN
-            ,?NUMBER_STATE_RESERVED
-            ];
-        {'false', 'true'} ->
-            [?NUMBER_STATE_IN_SERVICE
-            ,?NUMBER_STATE_RESERVED
-            ];
-        _ -> []
-    end.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
--spec ensure_can_load_to_create(knm_pipe:collection()) -> knm_pipe:collection();
-                               (knm_phone_number:record()) -> 'true'.
-%% FIXME: opaque
-ensure_can_load_to_create(T0=#{'todo' := PNs}) ->
-    F = fun (PN, T) ->
-                case knm_pipe:attempt(fun ensure_can_load_to_create/1, [PN]) of
-                    'true' -> knm_pipe:set_succeeded(T, PN);
-                    {'error', R} ->
-                        Num = knm_phone_number:number(PN),
-                        knm_pipe:set_failed(T, Num, R)
-                end
-        end,
-    lists:foldl(F, T0, PNs);
-ensure_can_load_to_create(PN) ->
-    ensure_state(PN, [?NUMBER_STATE_AGING
-                     ,?NUMBER_STATE_AVAILABLE
-                     ,?NUMBER_STATE_PORT_IN
-                     ]).
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
--spec ensure_state(knm_phone_number:record(), kz_term:ne_binaries()) -> 'true'.
-ensure_state(PN, AllowedStates) ->
-    State = knm_phone_number:state(PN),
-    case lists:member(State, AllowedStates) of
-        'true' -> 'true';
+-spec ensure_assign_to_option(knm_options:options()) ->
+          kz_either:either(knm_errors:error(), knm_options:options()).
+ensure_assign_to_option(Options) ->
+    case kzs_util:is_account_id(knm_options:assign_to(Options)) of
+        'true' ->
+            {'ok', Options};
         'false' ->
-            Num = knm_phone_number:number(PN),
-            lager:error("~s wrong state ~s, expected one of ~p", [Num, State, AllowedStates]),
-            knm_errors:number_exists(Num)
+            Reason = knm_errors:to_json('assign_failure', 'undefined', 'field_undefined'),
+            {'error', Reason}
     end.
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec ensure_can_create(knm_pipe:collection()) -> knm_pipe:collection().
-%% FIXME: opaque
-ensure_can_create(T0=#{'todo' := Nums, 'options' := Options}) ->
-    F = fun (Num, T) ->
-                case knm_pipe:attempt(fun ensure_can_create/2, [Num, Options]) of
-                    {'error', R} -> knm_pipe:set_failed(T, Num, R);
-                    'true' ->
-                        PN = knm_phone_number:from_number_with_options(Num, Options),
-                        knm_pipe:set_succeeded(T, PN)
-                end
-        end,
-    lists:foldl(F, T0, Nums).
+-spec ensure_can_create(knm_options:options()) ->
+          kz_either:either(knm_errors:error(), knm_options:options()).
+ensure_can_create(Options) ->
+    SetState = fun(State) -> {'ok', props:set_value('state', State, Options)} end,
+    kz_either:pipe(kz_either:bind(state_for_create(Options), SetState)
+                  ,[fun ensure_assign_to_option/1
+                   ,fun ensure_account_can_create/1
+                   ]).
 
--spec ensure_can_create(kz_term:ne_binary(), knm_options:options()) -> 'true'.
-ensure_can_create(Num, Options) ->
-    ensure_account_can_create(Options, knm_options:auth_by(Options))
-        andalso ensure_number_is_not_porting(Num, Options).
+%% @private
+-spec ensure_account_can_create(knm_options:options()) ->
+          kz_either:either(knm_errors:error(), knm_options:options()).
+ensure_account_can_create(Options) ->
+    ensure_account_can_create(Options, knm_options:auth_by(Options)).
 
--ifdef(TEST).
-%% TODO: this is required to simulate reseller account without number_allowed_addition
-%% Remove this after fixturedb supports save operation
--define(LOAD_ACCOUNT(Options, AccountId)
-       ,(case props:get_value(<<"auth_by_account">>, Options) of
-             'undefined' -> kzd_accounts:fetch(AccountId);
-             AccountJObj ->
-                 {'ok', Fetched} = kzd_accounts:fetch(AccountId),
-                 {'ok', kz_json:merge(Fetched, AccountJObj)}
-         end)
-       ).
--else.
--define(LOAD_ACCOUNT(_Options, AccountId)
-       ,kzd_accounts:fetch(AccountId)
-       ).
--endif.
-
--spec allow_number_additions(knm_options:options(), kz_term:ne_binary()) -> boolean().
-allow_number_additions(_Options, ?KNM_DEFAULT_AUTH_BY) ->
-    'true';
-allow_number_additions(_Options, _AccountId) ->
-    {'ok', JObj} = ?LOAD_ACCOUNT(_Options, _AccountId),
-    kzd_accounts:allow_number_additions(JObj).
-
-ensure_account_can_create(_, ?KNM_DEFAULT_AUTH_BY) ->
-    lager:info("bypassing auth"),
-    'true';
+%% @private
+-spec ensure_account_can_create(knm_options:options(), kz_term:api_ne_binary()) ->
+          kz_either:either(knm_errors:error(), knm_options:options()).
+ensure_account_can_create(Options, ?KNM_DEFAULT_AUTH_BY) ->
+    {'ok', Options};
 ensure_account_can_create(Options, ?MATCH_ACCOUNT_RAW(AccountId)) ->
-    knm_options:ported_in(Options)
+    case knm_options:ported_in(Options)
         orelse knm_options:state(Options) =:= ?NUMBER_STATE_PORT_IN
         orelse allow_number_additions(Options, AccountId)
-        orelse knm_phone_number:is_admin(AccountId)
-        orelse knm_errors:unauthorized();
+        orelse kzd_accounts:is_superduper_admin(AccountId)
+    of
+        'true' ->
+            {'ok', Options};
+        'false' ->
+            {'error', knm_errors:to_json('unauthorized')}
+    end;
 ensure_account_can_create(_, _NotAnAccountId) ->
     lager:debug("'~p' is not an account id", [_NotAnAccountId]),
-    knm_errors:unauthorized().
+    {'error', knm_errors:to_json('unauthorized')}.
 
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
 -spec ensure_number_is_not_porting(kz_term:ne_binary(), knm_options:options()) -> 'true'.
 -ifdef(TEST).
 %% TODO: Remove me after fixturedb has save feature
@@ -202,6 +111,93 @@ ensure_number_is_not_porting(Num, Options) ->
         {'error', _} -> 'true'
     end.
 -endif.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec ensure_can_load_to_create(knm_pipe:collection()) -> knm_pipe:collection().
+ensure_can_load_to_create(T) ->
+    PNs = knm_pipe:todo(T),
+    lists:foldl(fun ensure_load_create_state/2, T, PNs).
+
+-spec ensure_load_create_state(knm_phone_number:record(), knm_options:options()) ->
+          knm_pipe:collection().
+ensure_load_create_state(PN, T) ->
+    AllowedStates = [?NUMBER_STATE_AGING
+                    ,?NUMBER_STATE_AVAILABLE
+                    ,?NUMBER_STATE_PORT_IN
+                    ],
+    State = knm_phone_number:state(PN),
+    case lists:member(State, AllowedStates) of
+        'true' -> knm_pipe:set_succeeded(T, PN);
+        'false' ->
+            Num = knm_phone_number:number(PN),
+            lager:error("number ~s is wrong state ~s for creating", [Num, State]),
+            knm_pipe:set_failed(T, Num, knm_errors:to_json('number_exists', Num))
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec state_for_create(knm_options:options()) ->
+          kz_either:either(knm_errors:error(), kz_term:ne_binary()).
+state_for_create(Options) ->
+    state_for_create(Options
+                    ,knm_options:state(Options, ?NUMBER_STATE_IN_SERVICE)
+                    ,knm_options:ported_in(Options)
+                    ,knm_options:module_name(Options)
+                    ).
+
+%% @private
+-spec state_for_create(knm_options:options(), kz_term:api_ne_binary(), boolean(), kz_term:api_ne_binary()) ->
+          kz_either:either(knm_errors:error(), kz_term:ne_binary()).
+state_for_create(_, ?NUMBER_STATE_PORT_IN = State, _, _) ->
+    {'ok', State};
+state_for_create(_, _, 'true', _) ->
+    {'ok', ?NUMBER_STATE_IN_SERVICE};
+state_for_create(_, _, _, ?CARRIER_MDN) ->
+    {'ok', ?NUMBER_STATE_IN_SERVICE};
+state_for_create(Options, State, _, _) ->
+    AuthBy = knm_options:auth_by(Options),
+    case lists:member(State, allowed_creation_states(Options, AuthBy)) of
+        'true' ->
+            lager:debug("picking state ~s for creating number(s) authorized by ~s", [State, AuthBy]),
+            {'ok', State};
+        'false' ->
+            Reason = knm_errors:to_json('unauthorized', 'undefined', 'state_for_create'),
+            {'error', Reason}
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec allowed_creation_states(kz_term:api_ne_binary()) -> kz_term:ne_binaries().
+allowed_creation_states(AuthBy) ->
+    allowed_creation_states([], AuthBy).
+
+-spec allowed_creation_states(knm_options:options(), kz_term:api_ne_binary()) -> kz_term:ne_binaries().
+allowed_creation_states(_, 'undefined') -> [];
+allowed_creation_states(Options, AuthBy) ->
+    case {kzd_accounts:is_superduper_admin(AuthBy)
+         ,allow_number_additions(Options, AuthBy)
+         }
+    of
+        {'true', _} ->
+            [?NUMBER_STATE_AGING
+            ,?NUMBER_STATE_AVAILABLE
+            ,?NUMBER_STATE_IN_SERVICE
+            ,?NUMBER_STATE_PORT_IN
+            ,?NUMBER_STATE_RESERVED
+            ];
+        {'false', 'true'} ->
+            [?NUMBER_STATE_IN_SERVICE
+            ,?NUMBER_STATE_RESERVED
+            ];
+        _ -> []
+    end.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -304,3 +300,35 @@ force_module_outbound(_Mod) -> 'false'.
 -spec force_local_outbound() -> boolean().
 force_local_outbound() ->
     knm_config:should_force_local_outbound().
+
+%%%=============================================================================
+%%% Internal functions
+%%%=============================================================================
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-ifdef(TEST).
+%% TODO: this is required to simulate reseller account without number_allowed_addition
+%% Remove this after fixturedb supports save operation
+-define(LOAD_ACCOUNT(Options, AccountId)
+       ,(case props:get_value(<<"auth_by_account">>, Options) of
+             'undefined' -> kzd_accounts:fetch(AccountId);
+             AccountJObj ->
+                 {'ok', Fetched} = kzd_accounts:fetch(AccountId),
+                 {'ok', kz_json:merge(Fetched, AccountJObj)}
+         end)
+       ).
+-else.
+-define(LOAD_ACCOUNT(_Options, AccountId)
+       ,kzd_accounts:fetch(AccountId)
+       ).
+-endif.
+
+-spec allow_number_additions(knm_options:options(), kz_term:ne_binary()) -> boolean().
+allow_number_additions(_Options, ?KNM_DEFAULT_AUTH_BY) ->
+    'true';
+allow_number_additions(_Options, _AccountId) ->
+    {'ok', JObj} = ?LOAD_ACCOUNT(_Options, _AccountId),
+    kzd_accounts:allow_number_additions(JObj).

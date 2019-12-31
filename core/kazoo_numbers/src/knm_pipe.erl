@@ -17,6 +17,7 @@
         ,todo/1, set_todo/2
 
         ,id/1
+        ,add_success/2
         ,add_succeeded/2
         ]).
 
@@ -134,7 +135,17 @@ succeeded(#{'succeeded' := Succeeded}) -> Succeeded.
 -spec set_succeeded(collection(), success() | succeeded()) -> collection().
 set_succeeded(Collection, Succeeded) when is_list(Succeeded) -> Collection#{'succeeded' => Succeeded};
 set_succeeded(Collection, Success) when not is_list(Success) ->
+    %% FIXME: DO NOT APPEND
+    %% FIXME: DO NOT APPEND
     Collection#{'succeeded' => [Success | maps:get('succeeded', Collection)]}.
+
+-spec add_success(collection(), success()) -> collection().
+add_success(Collection, Success) when not is_list(Success) ->
+    Collection#{'succeeded' => [Success | maps:get('succeeded', Collection)]}.
+
+-spec add_succeeded(collection(), succeeded()) -> collection().
+add_succeeded(Collection=#{'succeeded' := Succeeded}, Numbers) when is_list(Numbers) ->
+    Collection#{'succeeded' => Numbers ++ Succeeded}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -145,15 +156,6 @@ todo(#{'todo' := ToDo}) -> ToDo.
 
 -spec set_todo(collection(), kz_term:ne_binaries() | succeeded()) -> collection().
 set_todo(Collection, ToDo) -> Collection#{'todo' => ToDo}.
-
-%%------------------------------------------------------------------------------
-%% @doc
-%% @end
-%%------------------------------------------------------------------------------
--spec add_succeeded(collection(), succeeded()) -> collection().
-%% FIXME: unify with succeeded/2.
-add_succeeded(Collection=#{'succeeded' := Succeeded}, Numbers) when is_list(Numbers) ->
-    Collection#{'succeeded' => Numbers ++ Succeeded}.
 
 %%%=============================================================================
 %%% Other functions

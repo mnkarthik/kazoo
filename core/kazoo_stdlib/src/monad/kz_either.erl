@@ -12,6 +12,7 @@
 
 -export([bind/2
         ,cata/3
+        ,catar/2
         ,from_maybe/1
         ,left/1, from_left/1
         ,pipe/2
@@ -115,6 +116,10 @@ unless({'error', Val}, Fn) -> Fn(Val).
 -spec cata(either(L, R), fun((L) -> X), fun((R) -> X)) -> X.
 cata({'ok', _}=Right, _LFn, RFn) -> RFn(Right);
 cata({'error', Val}, LFn, _RFn) -> LFn(Val).
+
+-spec catar(either(L, R), fun((R) -> X)) -> X | left(L).
+catar({'ok', _}=Right, RFn) -> RFn(Right);
+catar({'error', _}=Left, _RFn) -> Left.
 
 %%------------------------------------------------------------------------------
 %% @doc Chain monadic function to apply to `Either'.
