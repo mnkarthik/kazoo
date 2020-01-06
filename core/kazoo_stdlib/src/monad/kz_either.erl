@@ -87,7 +87,7 @@ from_maybe(Term) ->
 %%         ). %% {'error', "Evil"}
 %% '''
 %%
-%% @see See {@link unless/2} to apply function to left side value
+%% @see unless/2
 %% @end
 %%------------------------------------------------------------------------------
 -spec bind(either(L, R), fun((R) -> X)) -> X when X :: either(L, any()).
@@ -98,7 +98,7 @@ bind({'error', _}=Left, _Fn) -> Left.
 %% @doc This will apply the supplied function over the left side of the either,
 %% if one exists, otherwise it returns the Either untouched.
 %%
-%% @see See {@link bind/2} to apply function to right side value
+%% @see bind/2
 %% @end
 %%------------------------------------------------------------------------------
 -spec unless(either(L, R), fun((L) -> X)) -> X when X :: either(any(), R).
