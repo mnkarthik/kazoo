@@ -365,9 +365,7 @@ create_available_checks() ->
     ].
 
 create_with_no_auth_by() ->
-    Resp = knm_pipe:attempt(fun knm_lib:ensure_can_create/2
-                           ,[?TEST_CREATE_NUM, []]
-                           ),
+    Resp = knm_lib:ensure_can_create([]),
     [{"Ensure unauthorized error thrown when no auth_by supplied"
      ,?_assertMatch({'error', _}, Resp)
      }
@@ -375,15 +373,13 @@ create_with_no_auth_by() ->
     ].
 
 create_with_disallowed_account() ->
-    Resp = knm_pipe:attempt(fun knm_lib:ensure_can_create/2
-                           ,[?TEST_CREATE_NUM
-                            ,[{'auth_by', ?RESELLER_ACCOUNT_ID}
-                             ,{<<"auth_by_account">>
-                              ,kzd_accounts:set_allow_number_additions(?RESELLER_ACCOUNT_DOC, 'false')
-                              }
-                             ]
-                            ]
-                           ),
+    Resp = knm_lib:ensure_can_create(
+             [{'auth_by', ?RESELLER_ACCOUNT_ID}
+             ,{<<"auth_by_account">>
+              ,kzd_accounts:set_allow_number_additions(?RESELLER_ACCOUNT_DOC, 'false')
+              }
+             ]
+            ),
     [{"Ensure unauthorized error when auth_by account isn't allowed to create numbers"
      ,?_assertMatch({'error', _}, Resp)
      }
@@ -391,24 +387,25 @@ create_with_disallowed_account() ->
     ].
 
 create_with_number_porting() ->
-    Resp = knm_pipe:attempt(fun knm_lib:ensure_can_create/2
-                           ,[?TEST_AVAILABLE_NUM %% pretend it is porting
-                            ,[{'auth_by', ?RESELLER_ACCOUNT_ID}
-                             ,{<<"auth_by_account">>
-                              ,kzd_accounts:set_allow_number_additions(?RESELLER_ACCOUNT_DOC, 'true')
-                              }
-                             ]
-                            ]),
-    [{"Ensure number_is_porting error when auth_by account isn't allowed to create numbers"
-     ,?_assertMatch({'error', _}, Resp)
+    Collection = knm_pipe:new([], []),
+    Col1 = knm_lib:ensure_numbers_are_not_porting([?TEST_NEW_PORT_NUM], Collection),
+    [{"Ensure number_is_porting when creating a port request number"
+     ,?_assert(maps:is_map(Col1)
+               andalso kz_term:is_not_empty(Col1)
+              )
      }
-     | check_error_response(Resp, 400, <<"number_is_porting">>, ?TEST_AVAILABLE_NUM)
+     | check_error_response(Col1, 400, <<"number_is_porting">>, ?TEST_NEW_PORT_NUM)
     ].
 
 check_error_response(E, Code, Error) ->
     check_error_response(E, Code, Error, 'undefined').
+
 check_error_response(E, Code, Error, Cause) ->
     check_error_response(E, Code, Error, Cause, 'undefined').
+
+check_error_response(#{}=E, Code, Error, Cause, Message) ->
+    [{_, JObj}|_] = maps:to_list(E),
+    check_error_response({'error', JObj}, Code, Error, Cause, Message);
 check_error_response({'error', JObj}, Code, Error, Cause, Message) ->
     validate_errors(JObj
                    ,[{Code, fun knm_errors:code/1, "Verify 'code' is set properly"}
@@ -432,9 +429,5 @@ validate_errors(JObj, [{V, F, L}|Vs], Tests) ->
 
 create_new_number() ->
     {"Ensure success when auth_by account is allowed to create numbers"
-    ,?_assert(knm_lib:ensure_can_create(?TEST_CREATE_NUM
-                                       ,[{'auth_by', ?RESELLER_ACCOUNT_ID}
-                                        ]
-                                       )
-             )
+    ,?_assert(knm_lib:ensure_can_create([{'auth_by', ?RESELLER_ACCOUNT_ID}]))
     }.

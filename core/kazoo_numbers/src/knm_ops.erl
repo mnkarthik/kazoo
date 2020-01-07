@@ -84,39 +84,12 @@ create(Nums, Opts0) ->
 -spec do_create(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 do_create(Nums, Options) ->
     ColGet = do_get(Nums, ?OPTIONS_FOR_LOAD(Nums, props:delete('state', Options))),
-    Col0 = knm_pipe:pipe(knm_pipe:set_options(ColGet, Options)
-                        ,[fun knm_lib:ensure_can_load_to_create/1
-                         ,fun update_for_create/1
-                         ]),
+    Col0 = knm_lib:ensure_can_load_to_create(knm_pipe:set_options(ColGet, Options)),
     {Col1, NotFounds} = take_not_founds(Col0),
-    Col2 = lists:foldl(fun create_new_numbers/2, Col1, NotFounds),
-    knm_pipe:pipe(Col2
+    knm_pipe:pipe(knm_lib:ensure_numbers_are_not_porting(NotFounds, Col1)
                  ,[fun knm_states:to_options_state/1
                   ,fun save_numbers/1
                   ]).
-
--spec create_new_numbers(kz_term:ne_binary(), knm_pipe:collection()) -> knm_pipe:collection().
-create_new_numbers(Num, T) ->
-    Options = knm_pipe:options(T),
-    %% FIXME: move setting success and failed to the function itself
-    %% and update the tests
-    try knm_lib:ensure_number_is_not_porting(Num, Options) of
-        'true' ->
-            PN = knm_phone_number:from_number_with_options(Num, Options),
-            knm_pipe:add_success(T, PN)
-    catch
-        'throw':{'error', Reason, Num} ->
-            Reason = knm_errors:to_json(Reason, Num),
-            knm_pipe:set_failed(T, Num, Reason)
-    end.
-
--spec update_for_create(knm_pipe:collection()) -> knm_pipe:collection().
-update_for_create(Collection) ->
-    Options = knm_pipe:options(Collection),
-    Updates = knm_options:to_phone_number_setters(
-                props:delete('state', Options)
-               ),
-    knm_phone_number:setters(Collection, Updates).
 
 -spec take_not_founds(knm_pipe:collection()) -> {knm_pipe:collection(), kz_term:ne_binaries()}.
 take_not_founds(Collection) ->

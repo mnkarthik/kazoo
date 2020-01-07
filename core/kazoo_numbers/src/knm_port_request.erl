@@ -14,6 +14,7 @@
         ,public_fields/0
         ,public_fields/1
         ,get/1
+        ,are_porting/1
         ,get_portin_number/2
         ,new/2
         ,account_active_ports/1
@@ -139,6 +140,24 @@ get(DID=?NE_BINARY) ->
         {'error', _E}=Error ->
             lager:debug("failed to query for port number '~s': ~p", [DID, _E]),
             Error
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc Used by knm when creating numbers, to check the numbers being created
+%% are not numbers specified in port requests.
+%% @end
+%%------------------------------------------------------------------------------
+-spec are_porting(kz_term:ne_binaries()) -> {kz_term:ne_binaries(), kz_term:ne_binaries()}.
+are_porting(Numbers) ->
+    View = ?ACTIVE_PORT_IN_NUMBERS,
+    ViewOptions = [{'keys', [Numbers]}],
+    case kz_datamgr:get_results(?KZ_PORT_REQUESTS_DB, View, ViewOptions) of
+        {'ok', JObjs} ->
+            Partition = fun(JObj) -> kz_term:is_empty(kz_json:get_ne_binary_value(<<"error">>, JObj)) end,
+            lists:partition(Partition, JObjs);
+        {'error', _E} ->
+            lager:debug("failed to check if numbers are port_in: ~p", [_E]),
+            {[], Numbers}
     end.
 
 %%------------------------------------------------------------------------------

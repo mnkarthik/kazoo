@@ -14,7 +14,7 @@
 -export([ensure_assign_to_option/1
         ,ensure_can_create/1
         ,ensure_can_load_to_create/1
-        ,ensure_number_is_not_porting/2
+        ,ensure_numbers_are_not_porting/2
         ,state_for_create/1
         ,allowed_creation_states/1, allowed_creation_states/2
         ]).
@@ -93,24 +93,29 @@ ensure_account_can_create(_, _NotAnAccountId) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec ensure_number_is_not_porting(kz_term:ne_binary(), knm_options:options()) -> 'true'.
--ifdef(TEST).
-%% TODO: Remove me after fixturedb has save feature
-ensure_number_is_not_porting(?TEST_CREATE_NUM, _Options) -> 'true';
-ensure_number_is_not_porting(?TEST_AVAILABLE_NUM = Num, _Options) ->
-    knm_errors:number_is_porting(Num).
--else.
-ensure_number_is_not_porting(Num, Options) ->
-    JustPorted = knm_options:ported_in(Options),
-    case JustPorted
-        orelse knm_port_request:get(Num)
-    of
-        'true' -> 'true';
-        {'ok', _Doc} -> knm_errors:number_is_porting(Num);
-        {'error', 'not_found'} -> 'true';
-        {'error', _} -> 'true'
+-spec ensure_numbers_are_not_porting(kz_term:ne_binaries(), knm_pipe:collection()) ->
+          knm_pipe:collection().
+ensure_numbers_are_not_porting(Nums, Collection) ->
+    case knm_options:ported_in(knm_pipe:options(Options)) of
+        'true' ->
+            handle_ensure_numbers_are_not_porting(Collection, {[], Nums});
+        'false' ->
+            handle_ensure_numbers_are_not_porting(Collection, knm_port_request:are_porting(Nums))
     end.
--endif.
+
+-spec handle_ensure_numbers_are_not_porting(knm_pipe:collection(), {kz_term:ne_binaries(), kz_term:ne_binaries()}) ->
+          knm_pipe:collection().
+handle_ensure_numbers_are_not_porting(Collection, {PortIn, NotPortIn}) ->
+    Options = knm_pipe:options(Collection),
+
+    FailedAcc = knm_pipe:failed(Collection),
+    PortInErrors = [{Num, knm_errors:to_json('number_is_porting', Num)} || Num <- PortIn],
+    ToCreatePN = [knm_phone_number:from_number_with_options(Num, Options) || Num <- NotPortIn],
+
+    knm_pipe:set_failed(knm_pipe:add_succeeded(Collection, ToCreatePN)
+                       ,Collection
+                       ,maps:merge(FailedAcc, PortInErrors)
+                       ).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -123,18 +128,23 @@ ensure_can_load_to_create(T) ->
 
 -spec ensure_load_create_state(knm_phone_number:record(), knm_options:options()) ->
           knm_pipe:collection().
-ensure_load_create_state(PN, T) ->
+ensure_load_create_state(PN, Collection) ->
     AllowedStates = [?NUMBER_STATE_AGING
                     ,?NUMBER_STATE_AVAILABLE
                     ,?NUMBER_STATE_PORT_IN
                     ],
     State = knm_phone_number:state(PN),
     case lists:member(State, AllowedStates) of
-        'true' -> knm_pipe:set_succeeded(T, PN);
+        'true' ->
+            Options = knm_pipe:options(Collection),
+            Updates = knm_options:to_phone_number_setters(
+                        props:delete('state', Options)
+                       ),
+            knm_pipe:add_success(Collection, knm_phone_number:setters(PN, Updates));
         'false' ->
             Num = knm_phone_number:number(PN),
             lager:error("number ~s is wrong state ~s for creating", [Num, State]),
-            knm_pipe:set_failed(T, Num, knm_errors:to_json('number_exists', Num))
+            knm_pipe:set_failed(Collection, Num, knm_errors:to_json('number_exists', Num))
     end.
 
 %%------------------------------------------------------------------------------
