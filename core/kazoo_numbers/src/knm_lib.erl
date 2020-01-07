@@ -96,7 +96,7 @@ ensure_account_can_create(_, _NotAnAccountId) ->
 -spec ensure_numbers_are_not_porting(kz_term:ne_binaries(), knm_pipe:collection()) ->
           knm_pipe:collection().
 ensure_numbers_are_not_porting(Nums, Collection) ->
-    case knm_options:ported_in(knm_pipe:options(Options)) of
+    case knm_options:ported_in(knm_pipe:options(Collection)) of
         'true' ->
             handle_ensure_numbers_are_not_porting(Collection, {[], Nums});
         'false' ->
