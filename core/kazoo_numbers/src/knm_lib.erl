@@ -28,11 +28,6 @@
         ,is_force_outbound/1
         ]).
 
--ifdef(TEST).
-%% TODO: Remove me after fixturedb has save feature
--export([ensure_can_create/2]).
--endif.
-
 -include("knm.hrl").
 
 %%------------------------------------------------------------------------------
