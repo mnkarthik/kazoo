@@ -118,7 +118,7 @@ cata({'ok', Val}, _LFn, RFn) -> RFn(Val);
 cata({'error', Val}, LFn, _RFn) -> LFn(Val).
 
 -spec catar(either(L, R), fun((R) -> X)) -> X | left(L).
-catar({'ok', _}=Right, RFn) -> RFn(Right);
+catar({'ok', Val}, RFn) -> RFn(Val);
 catar({'error', _}=Left, _RFn) -> Left.
 
 %%------------------------------------------------------------------------------
@@ -130,5 +130,5 @@ catar({'error', _}=Left, _RFn) -> Left.
 %%------------------------------------------------------------------------------
 -spec pipe(either(L, R), [fun((R) -> X)]) -> either(L, X).
 pipe({'error', _}=Left, _) -> Left;
-pipe({'ok', Val}, []) -> Val;
+pipe({'ok', Right}, []) -> Right;
 pipe({'ok', Val}, [Fun|Funs]) -> pipe(Fun(Val), Funs).
