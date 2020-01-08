@@ -108,7 +108,6 @@ handle_ensure_numbers_are_not_porting(Collection, {PortIn, NotPortIn}) ->
     ToCreatePN = [knm_phone_number:from_number_with_options(Num, Options) || Num <- NotPortIn],
 
     knm_pipe:set_failed(knm_pipe:add_succeeded(Collection, ToCreatePN)
-                       ,Collection
                        ,maps:merge(FailedAcc, PortInErrors)
                        ).
 
