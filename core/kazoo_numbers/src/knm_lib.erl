@@ -109,7 +109,7 @@ handle_ensure_numbers_are_not_porting(Collection, {PortIn, NotPortIn}) ->
     Options = knm_pipe:options(Collection),
 
     FailedAcc = knm_pipe:failed(Collection),
-    PortInErrors = [{Num, knm_errors:to_json('number_is_porting', Num)} || Num <- PortIn],
+    PortInErrors = maps:from_list([{Num, knm_errors:to_json('number_is_porting', Num)} || Num <- PortIn]),
     ToCreatePN = [knm_phone_number:from_number_with_options(Num, Options) || Num <- NotPortIn],
 
     knm_pipe:set_failed(knm_pipe:add_succeeded(Collection, ToCreatePN)
@@ -140,7 +140,8 @@ ensure_load_create_state(PN, Collection) ->
             Updates = knm_options:to_phone_number_setters(
                         props:delete('state', Options)
                        ),
-            knm_pipe:add_success(Collection, knm_phone_number:setters(PN, Updates));
+            {'ok', Updated} = knm_phone_number:setters(PN, Updates),
+            knm_pipe:add_success(Collection, Updated);
         'false' ->
             Num = knm_phone_number:number(PN),
             lager:error("number ~s is wrong state ~s for creating", [Num, State]),

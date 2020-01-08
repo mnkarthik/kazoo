@@ -67,9 +67,9 @@ rename_carrier() ->
 
     JObj3 = kz_json:from_list([{?FEATURE_RENAME_CARRIER, <<"telnyx">>}]),
     #{'failed' := #{?TEST_TELNYX_NUM := Error5}} = knm_ops:update([PN4]
-                                                                     ,[{fun knm_phone_number:reset_doc/2, JObj3}]
-                                                                     ,[{auth_by, ?RESELLER_ACCOUNT_ID}]
-                                                                     ),
+                                                                 ,[{fun knm_phone_number:reset_doc/2, JObj3}]
+                                                                 ,[{auth_by, ?RESELLER_ACCOUNT_ID}]
+                                                                 ),
     JObj4 = kz_json:from_list([{?FEATURE_RENAME_CARRIER, <<"gen_carrier">>}]),
     #{'succeeded' := [PN6]} = knm_ops:update([PN4], [{fun knm_phone_number:reset_doc/2, JObj4}]),
 
