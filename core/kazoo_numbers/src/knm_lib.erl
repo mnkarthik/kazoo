@@ -78,11 +78,15 @@ ensure_account_can_create(Options, ?MATCH_ACCOUNT_RAW(AccountId)) ->
         'true' ->
             {'ok', Options};
         'false' ->
-            {'error', knm_errors:to_json('unauthorized')}
+            Cause = kz_binary:format("account '~s' is not allowed to create number", [AccountId]),
+            Reason = knm_errors:to_json('unauthorized', 'undefined', Cause),
+            {'error', Reason}
     end;
 ensure_account_can_create(_, _NotAnAccountId) ->
     lager:debug("'~p' is not an account id", [_NotAnAccountId]),
-    {'error', knm_errors:to_json('unauthorized')}.
+    Cause = <<"cannot determined account is allowed to create number, account id is undefined">>,
+    Reason = knm_errors:to_json('unauthorized', 'undefined', Cause),
+    {'error', Reason}.
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -171,7 +175,8 @@ state_for_create(Options, State, _, _) ->
             lager:debug("picking state ~s for creating number(s) authorized by ~s", [State, AuthBy]),
             {'ok', State};
         'false' ->
-            Reason = knm_errors:to_json('unauthorized', 'undefined', 'state_for_create'),
+            Cause = kz_binary:format("creating number in state '~s' is not allowed", [State]),
+            Reason = knm_errors:to_json('unauthorized', 'undefined', Cause),
             {'error', Reason}
     end.
 
