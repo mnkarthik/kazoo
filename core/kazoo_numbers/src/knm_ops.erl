@@ -47,10 +47,13 @@ do_get(Nums, Options) ->
     {Yes, No} = knm_converters:are_reconcilable(Nums),
     knm_pipe:do(fun knm_phone_number:fetch/1, knm_pipe:new(Options, Yes, No)).
 
--spec do_get(kz_term:ne_binaries(), knm_options:options(), knm_pipe:reason()) -> knm_pipe:collection().
-do_get(Nums, Options, Error) ->
-    {Yes, No} = knm_converters:are_reconcilable(Nums),
-    knm_pipe:do(fun knm_phone_number:fetch/1, knm_pipe:new(Options, Yes, No, Error)).
+-spec do_get_me(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
+do_get_me(Nums, Options) ->
+    Collection = do_get(Nums, Options),
+    Setters = [{fun knm_pipe:set_todo/2, knm_pipe:succeeded(Collection)}
+              ,{fun knm_pipe:set_succeeded/2, []}
+              ],
+    knm_pipe:setters(Collection, Setters).
 
 -spec from_jobjs(kz_json:objects()) -> knm_pipe:collection().
 from_jobjs(JObjs) ->
@@ -83,7 +86,7 @@ create(Nums, Opts0) ->
 
 -spec do_create(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 do_create(Nums, Options) ->
-    ColGet = do_get(Nums, ?OPTIONS_FOR_LOAD(Nums, props:delete('state', Options))),
+    ColGet = do_get_me(Nums, ?OPTIONS_FOR_LOAD(Nums, props:delete('state', Options))),
     Col0 = knm_lib:ensure_can_load_to_create(knm_pipe:set_options(ColGet, Options)),
     {Col1, NotFounds} = take_not_founds(Col0),
     knm_pipe:pipe(knm_lib:ensure_numbers_are_not_porting(NotFounds, Col1)
@@ -133,8 +136,7 @@ update(Nums, Routines) ->
           knm_pipe:collection().
 %% FIXME: first argument could be ne_binaries or knm_phone_numbers
 update([?NE_BINARY|_]=Nums, Routines, Options) ->
-    Reason = 'not_reconcilable',  %% FIXME: unify to atom OR knm_error.
-    do_update(do_get(Nums, Options, Reason), Routines);
+    do_update(do_get(Nums, Options), Routines);
 update(Ns, Updates, Options) ->
     Routines = [{fun knm_phone_number:set_dirty/2, 'false'}
                 | knm_options:to_phone_number_setters(Options)
@@ -148,8 +150,7 @@ update(Ns, Updates, Options) ->
 
 -spec update(kz_term:ne_binaries(), knm_phone_number:set_functions(), knm_options:options()) -> knm_pipe:collection().
 update(Nums, Routines, Options) ->
-    Reason = 'not_reconcilable',  %% FIXME: unify to atom OR knm_error.
-    do_update(do_get(Nums, Options, Reason), Routines).
+    do_update(do_get(Nums, Options), Routines).
 
 -endif.
 

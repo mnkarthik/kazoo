@@ -122,7 +122,7 @@ handle_ensure_numbers_are_not_porting(Collection, {PortIn, NotPortIn}) ->
 -spec ensure_can_load_to_create(knm_pipe:collection()) -> knm_pipe:collection().
 ensure_can_load_to_create(T) ->
     PNs = knm_pipe:todo(T),
-    lists:foldl(fun ensure_load_create_state/2, T, PNs).
+    lists:foldl(fun ensure_load_create_state/2, knm_pipe:set_todo(T, []), PNs).
 
 -spec ensure_load_create_state(knm_phone_number:record(), knm_options:options()) ->
           knm_pipe:collection().

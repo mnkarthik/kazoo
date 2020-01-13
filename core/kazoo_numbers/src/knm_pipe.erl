@@ -135,8 +135,7 @@ succeeded(#{'succeeded' := Succeeded}) -> Succeeded.
 -spec set_succeeded(collection(), success() | succeeded()) -> collection().
 set_succeeded(Collection, Succeeded) when is_list(Succeeded) -> Collection#{'succeeded' => Succeeded};
 set_succeeded(Collection, Success) when not is_list(Success) ->
-    %% FIXME: DO NOT ADD
-    %% FIXME: DO NOT ADD
+    %% FIXME: DO NOT ADD, REPLACE. FOR ADD USE add_succeeded/2 and add_success/2
     Collection#{'succeeded' => [Success | maps:get('succeeded', Collection)]}.
 
 -spec add_success(collection(), success()) -> collection().
