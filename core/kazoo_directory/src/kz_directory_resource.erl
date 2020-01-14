@@ -33,7 +33,7 @@ profile(EndpointId, AccountId, Options) ->
 
 -spec lookup_account(kz_term:ne_binary(), kz_term:ne_binary(), kz_term:ne_binary(), kz_term:proplist()) -> {'ok', kz_json:object()} | {'error', any()}.
 lookup_account(EndpointId, AccountId, Number, Options) ->
-    case knm_number:lookup_account(Number) of
+    case knm_numbers:lookup_account(Number) of
         {'error', _R} = Error ->
             lager:info("unable to determine account for number ~s: ~p",[Number, _R]),
             Error;

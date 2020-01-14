@@ -82,7 +82,10 @@ from_jobjs(JObjs) ->
 %%------------------------------------------------------------------------------
 -spec create(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 create(Nums, Opts0) ->
-    kz_either:catar(knm_lib:ensure_can_create(Opts0), fun(Options) -> do_create(Nums, Options) end).
+    kz_either:cata(knm_lib:ensure_can_create(Opts0)
+                  ,fun(Reason) -> knm_pipe:new(Opts0, [], Nums, Reason) end
+                  ,fun(Options) -> do_create(Nums, Options) end
+                  ).
 
 -spec do_create(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 do_create(Nums, Options) ->

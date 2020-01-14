@@ -172,7 +172,7 @@ create_number(Job, AccountId, AuthAccountId, CarrierModule, DID) ->
               ,{'dry_run', 'false'}
               ,{'module_name', CarrierModule}
               ],
-    try knm_number:create(DID, Options) of
+    try knm_numbers:create(DID, Options) of
         {'ok', PhoneNumber} ->
             lager:debug("successfully created number ~s for account ~s"
                        ,[knm_phone_number:number(PhoneNumber), AccountId]),
@@ -183,7 +183,8 @@ create_number(Job, AccountId, AuthAccountId, CarrierModule, DID) ->
                          ,<<"running">>
                          );
         {Failure, JObj} ->
-            update_with_failure(Job, AccountId, DID, Failure, JObj)
+            lager:debug("failed to create number ~s for account ~s: ~p ~p", [DID, AccountId, Failure, JObj]),
+            update_with_failure(Job, DID, JObj)
     catch
         ?STACKTRACE(E, _R, ST)
         kz_log:log_stacktrace(ST),
@@ -197,13 +198,17 @@ create_number(Job, AccountId, AuthAccountId, CarrierModule, DID) ->
                      )
         end.
 
--spec update_with_failure(kz_json:object(), kz_term:ne_binary(), kz_term:ne_binary(), atom(), kz_json:object()) ->
+-spec update_with_failure(kz_json:object(), kz_term:ne_binary(), kz_json:object() | atom()) ->
           kz_json:object().
-update_with_failure(Job, AccountId, Number, Failure, JObj) ->
-    lager:debug("failed to create number ~s for account ~s: ~p ~p", [Number, AccountId, Failure, JObj]),
-    case kz_json:is_json_object(JObj)
-        andalso kz_json:get_values(JObj)
-    of
+update_with_failure(Job, Number, Reason) when is_atom(Reason) ->
+    update_status(kz_json:set_value([<<"errors">>, Number]
+                                   ,kz_json:from_list([{<<"reason">>, kz_term:to_binary(Reason)}])
+                                   ,Job
+                                   )
+                 ,<<"running">>
+                 );
+update_with_failure(Job, Number, JObj) ->
+    case kz_json:get_values(JObj) of
         {[V], [K]} ->
             update_status(kz_json:set_value([<<"errors">>, Number]
                                            ,kz_json:from_list([{<<"reason">>, K}

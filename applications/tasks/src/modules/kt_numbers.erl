@@ -473,7 +473,7 @@ list_all(_, Todo) ->
 
 -spec find(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 find(#{'auth_account_id' := AuthBy}, _IterValue, Args=#{<<"e164">> := Num}) ->
-    handle_result(Args, knm_number:get(Num, [{'auth_by', AuthBy}])).
+    handle_result(Args, knm_numbers:get(Num, [{'auth_by', AuthBy}])).
 
 -spec dump(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
 dump(ExtraArgs, 'init') ->
@@ -568,7 +568,7 @@ import(#{'account_id' := Account
               ,{'public_fields', public_fields(Args)}
                | import_state(AuthAccountId, State)
               ],
-    Row = handle_result(Args, knm_number:create(E164, Options)),
+    Row = handle_result(Args, knm_numbers:create(E164, Options)),
     {Row, sets:add_element(AccountId, AccountIds)}.
 
 public_fields(Args) -> kz_json:from_list(lists:flatten(pub_fields(Args))).
@@ -680,7 +680,7 @@ assign_to(#{'auth_account_id' := AuthBy, 'account_id' := Account}
     Options = [{'auth_by', AuthBy}
               ,{'batch_run', 'true'}
               ],
-    handle_result(Args, knm_number:move(Num, AccountId, Options)).
+    handle_result(Args, knm_numbers:move(Num, AccountId, Options)).
 
 -spec update_merge(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 update_merge(#{'auth_account_id' := AuthBy}
@@ -691,7 +691,7 @@ update_merge(#{'auth_account_id' := AuthBy}
               ,{'batch_run', 'true'}
               ],
     Updates = [{fun knm_phone_number:update_doc/2, public_fields(Args)}],
-    handle_result(Args, knm_number:update(Num, Updates, Options)).
+    handle_result(Args, knm_numbers:update(Num, Updates, Options)).
 
 -spec update_overwrite(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 update_overwrite(#{'auth_account_id' := AuthBy}
@@ -702,7 +702,7 @@ update_overwrite(#{'auth_account_id' := AuthBy}
               ,{'batch_run', 'true'}
               ],
     Updates = [{fun knm_phone_number:reset_doc/2, public_fields(Args)}],
-    handle_result(Args, knm_number:update(Num, Updates, Options)).
+    handle_result(Args, knm_numbers:update(Num, Updates, Options)).
 
 -spec release(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 release(#{'auth_account_id' := AuthBy}
@@ -712,7 +712,7 @@ release(#{'auth_account_id' := AuthBy}
     Options = [{'auth_by', AuthBy}
               ,{'batch_run', 'true'}
               ],
-    handle_result(Args, knm_number:release(Num, Options)).
+    handle_result(Args, knm_numbers:release(Num, Options)).
 
 -spec reserve(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 reserve(#{'auth_account_id' := AuthBy, 'account_id' := Account}
@@ -723,7 +723,7 @@ reserve(#{'auth_account_id' := AuthBy, 'account_id' := Account}
               ,{'batch_run', 'true'}
               ,{'assign_to', select_account_id(AccountId0, Account)}
               ],
-    handle_result(Args, knm_number:reserve(Num, Options)).
+    handle_result(Args, knm_numbers:reserve(Num, Options)).
 
 -spec delete(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 delete(#{'auth_account_id' := AuthBy}
@@ -733,7 +733,7 @@ delete(#{'auth_account_id' := AuthBy}
     Options = [{'auth_by', AuthBy}
               ,{'batch_run', 'true'}
               ],
-    handle_result(Args, knm_number:delete(Num, Options)).
+    handle_result(Args, knm_numbers:delete(Num, Options)).
 
 %%%=============================================================================
 %%% Internal functions
@@ -743,7 +743,7 @@ delete(#{'auth_account_id' := AuthBy}
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_result(kz_tasks:args(), knm_number:return()) -> kz_tasks:return().
+-spec handle_result(kz_tasks:args(), knm_numbers:return()) -> kz_tasks:return().
 handle_result(Args, {'ok', PN}) ->
     format_result(Args, PN);
 handle_result(Args, {'dry_run', _Quotes}) ->

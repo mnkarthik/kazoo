@@ -34,12 +34,12 @@ create_new_number_rename_carrier() ->
               ,{'dry_run', 'false'}
               ,{'public_fields', kz_json:from_list([{?FEATURE_RENAME_CARRIER, <<"telnyx">>}])}
               ],
-    {'ok', PN1} = knm_number:create(?TEST_CREATE_NUM, Options),
+    {'ok', PN1} = knm_numbers:create(?TEST_CREATE_NUM, Options),
 
     WrongCarrier = kz_json:from_list([{?FEATURE_RENAME_CARRIER, <<"wrong_carrier">>}]),
-    {'error', Error2} = knm_number:create(?TEST_CREATE_NUM, props:set_value('public_fields', WrongCarrier, Options)),
+    {'error', Error2} = knm_numbers:create(?TEST_CREATE_NUM, props:set_value('public_fields', WrongCarrier, Options)),
 
-    {'error', Error3} = knm_number:create(?TEST_CREATE_NUM, props:set_value('auth_by', ?RESELLER_ACCOUNT_ID, Options)),
+    {'error', Error3} = knm_numbers:create(?TEST_CREATE_NUM, props:set_value('auth_by', ?RESELLER_ACCOUNT_ID, Options)),
 
     [?_assert(knm_phone_number:is_dirty(PN1))
     ,{"Verify only admin can create and set carrier"
@@ -56,7 +56,7 @@ rename_carrier() ->
     Options = [{auth_by, ?MASTER_ACCOUNT_ID}
               ,{assign_to, ?RESELLER_ACCOUNT_ID}
               ],
-    {'ok', PN1} = knm_number:create(?TEST_TELNYX_NUM, Options),
+    {'ok', PN1} = knm_numbers:create(?TEST_TELNYX_NUM, Options),
 
     JObj1 = kz_json:from_list([{?FEATURE_RENAME_CARRIER, <<"local">>}]),
     #{'succeeded' := [PN2]} = knm_ops:update([PN1], [{fun knm_phone_number:reset_doc/2, JObj1}]),
@@ -119,7 +119,7 @@ rename_carrier() ->
 rename_from_local() ->
     Options = [{'auth_by', ?MASTER_ACCOUNT_ID}
               ],
-    {'ok', PN1} = knm_number:get(?TEST_IN_SERVICE_NUM, Options),
+    {'ok', PN1} = knm_numbers:get(?TEST_IN_SERVICE_NUM, Options),
     JObj1 = kz_json:from_list([{?FEATURE_RENAME_CARRIER, <<"telnyx">>}]),
     #{'succeeded' := [PN2]} = knm_ops:update([PN1], [{fun knm_phone_number:reset_doc/2, JObj1}], Options),
 
@@ -143,7 +143,7 @@ rename_from_local() ->
 rename_to_local_with_external_features() ->
     Options = [{auth_by, ?MASTER_ACCOUNT_ID}
               ],
-    {ok, PN1} = knm_number:get(?TEST_VITELITY_NUM, Options),
+    {ok, PN1} = knm_numbers:get(?TEST_VITELITY_NUM, Options),
     JObj1 = kz_json:from_list([{?FEATURE_RENAME_CARRIER, <<"local">>}]),
     #{'succeeded' := [PN2]} = knm_ops:update([PN1], [{fun knm_phone_number:update_doc/2, JObj1}], Options),
     [?_assert(not knm_phone_number:is_dirty(PN1))
@@ -178,7 +178,7 @@ rename_to_local_with_external_features() ->
 rename_to_nonlocal_with_external_features() ->
     Options = [{auth_by, ?MASTER_ACCOUNT_ID}
               ],
-    {ok, PN1} = knm_number:get(?TEST_VITELITY_NUM, Options),
+    {ok, PN1} = knm_numbers:get(?TEST_VITELITY_NUM, Options),
     JObj1 = kz_json:from_list([{?FEATURE_RENAME_CARRIER, <<"bandwidth">>}]),
     #{'succeeded' := [PN2]} = knm_ops:update([PN1], [{fun knm_phone_number:update_doc/2, JObj1}], Options),
     [?_assert(not knm_phone_number:is_dirty(PN1))
@@ -229,5 +229,5 @@ available_features() ->
     ].
 
 is_feature_available(Num, Options) ->
-    {ok, PN} = knm_number:get(Num, Options),
+    {ok, PN} = knm_numbers:get(Num, Options),
     lists:member(?FEATURE_RENAME_CARRIER, knm_providers:available_features(PN)).

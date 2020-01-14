@@ -47,7 +47,7 @@ handle_audio_req(OffnetReq) ->
 
 -spec handle_audio_req(kz_term:ne_binary(), kapi_offnet_resource:req()) -> any().
 handle_audio_req(Number, OffnetReq) ->
-    case knm_number:lookup_account(Number) of
+    case knm_numbers:lookup_account(Number) of
         {'ok', _AccountId, Props} -> maybe_force_outbound(Props, OffnetReq);
         _ -> maybe_bridge(Number, OffnetReq)
     end.
@@ -66,7 +66,7 @@ handle_originate_req(OffnetReq) ->
 
 -spec handle_originate_req(kz_term:ne_binary(), kapi_offnet_resource:req()) -> any().
 handle_originate_req(Number, OffnetReq) ->
-    case knm_number:lookup_account(Number) of
+    case knm_numbers:lookup_account(Number) of
         {'ok', _AccountId, Props} ->
             maybe_force_originate_outbound(Props, OffnetReq);
         _ -> maybe_originate(Number, OffnetReq)

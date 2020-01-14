@@ -589,7 +589,7 @@ completed_portin(Num, AccountId, #{optional_reason := OptionalReason}) ->
               ],
 
     lager:debug("transitioning legacy port_in number ~s to in_service", [Num]),
-    case knm_number:update(Num, Routins, Options) of
+    case knm_numbers:update(Num, Routins, Options) of
         {'ok', _} ->
             lager:debug("number ~s ported successfully", [Num]);
         {'error', _Reason} ->
@@ -703,7 +703,7 @@ numbers_not_in_account_nor_in_service(AccountId, Nums) ->
     ]
         ++ maps:keys(Failed).
 
--spec is_in_account_and_in_service(kz_term:ne_binary(), knm_phone_number:phone_number()) -> boolean().
+-spec is_in_account_and_in_service(kz_term:ne_binary(), knm_phone_number:record()) -> boolean().
 is_in_account_and_in_service(AccountId, PN) ->
     AccountId =:= knm_phone_number:assigned_to(PN)
         andalso ?NUMBER_STATE_IN_SERVICE =:= knm_phone_number:state(PN).

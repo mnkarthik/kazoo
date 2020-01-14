@@ -1846,7 +1846,7 @@ generate_numbers(Type, AccountId, StartingNumber, Quantity) ->
 
 -spec delete(kz_term:ne_binary()) -> 'no_return'.
 delete(Num) ->
-    case knm_number:delete(Num, knm_options:default()) of
+    case knm_numbers:delete(Num, knm_options:default()) of
         {'ok', _} -> io:format("Removed ~s\n", [Num]);
         {'error', _R} -> io:format("ERROR: ~p\n", [_R])
     end,
@@ -1941,7 +1941,7 @@ edit_feature_permissions_on_number(Num, Fun, Feature) ->
         'false' -> invalid_feature(Feature);
         'true' ->
             Updates = [{Fun, Feature}],
-            case knm_number:update(Num, Updates) of
+            case knm_numbers:update(Num, Updates) of
                 {'ok', PN} -> list_number_feature_permissions(PN);
                 {'error', Error} -> error_with_number(Num, Error)
             end
@@ -1949,7 +1949,7 @@ edit_feature_permissions_on_number(Num, Fun, Feature) ->
 
 -spec feature_permissions_on_number(kz_term:ne_binary()) -> 'no_return'.
 feature_permissions_on_number(Num) ->
-    case knm_number:get(Num) of
+    case knm_numbers:get(Num) of
         {'error', Error} -> error_with_number(Num, Error);
         {'ok', PN} -> list_number_feature_permissions(PN)
     end.

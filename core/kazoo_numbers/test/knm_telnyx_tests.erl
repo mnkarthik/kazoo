@@ -110,7 +110,7 @@ e911() ->
               ,{'assign_to', ?RESELLER_ACCOUNT_ID}
               ,{'public_fields', JObj}
               ],
-    {ok, PN1} = knm_number:create(?TEST_TELNYX_NUM, Options),
+    {ok, PN1} = knm_numbers:create(?TEST_TELNYX_NUM, Options),
     #{'succeeded' := [PN2]} = knm_ops:update([PN1], [{fun knm_phone_number:reset_doc/2, JObj}]),
     [?_assert(knm_phone_number:is_dirty(PN1))
     ,{"Verify feature is properly set"
@@ -142,7 +142,7 @@ cnam() ->
               ,{'assign_to', ?RESELLER_ACCOUNT_ID}
               ,{'public_fields', JObj}
               ],
-    {ok, PN1} = knm_number:create(?TEST_TELNYX_NUM, Options),
+    {ok, PN1} = knm_numbers:create(?TEST_TELNYX_NUM, Options),
     #{'succeeded' := [PN2]} = knm_ops:update([PN1], [{fun knm_phone_number:reset_doc/2, JObj}]),
     Deactivate = kz_json:from_list(
                    [{?CNAM_INBOUND_LOOKUP, false}

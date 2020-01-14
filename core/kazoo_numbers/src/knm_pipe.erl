@@ -272,8 +272,7 @@ to_json(#{'succeeded' := PNs, 'failed' := Failed}) ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec attempt(fun(), list()) ->
-          knm_number:return() |
-          {'ok', knm_phone_number:record()} |
+          knm_numbers:return() |
           'true'.
 attempt(Fun, Args) ->
     try apply(Fun, Args) of

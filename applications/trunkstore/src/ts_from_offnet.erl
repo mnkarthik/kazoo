@@ -260,7 +260,7 @@ get_endpoint_data(State) ->
     RouteReq = ts_callflow:get_request_data(State),
     {ToUser, _} = kapps_util:get_destination(RouteReq, ?APP_NAME, <<"inbound_user_field">>),
     ToDID = knm_converters:normalize(ToUser),
-    case knm_number:lookup_account(ToDID) of
+    case knm_numbers:lookup_account(ToDID) of
         {'ok', AccountId, NumberProps} ->
             get_endpoint_data(State, RouteReq, ToDID, AccountId, NumberProps);
         _Else ->
@@ -332,9 +332,9 @@ routing_data(ToDID, AccountId, Settings) ->
     DIDOptions = kz_json:get_value(<<"DID_Opts">>, Settings, kz_json:new()),
     HuntAccountId = kz_json:get_value([<<"server">>, <<"hunt_account_id">>], Settings),
     RouteOpts = kz_json:get_value(<<"options">>, DIDOptions, []),
-    NumConfig = case knm_number:get(ToDID, [{'auth_by', AccountId}]) of
+    NumConfig = case knm_numbers:get(ToDID, [{'auth_by', AccountId}]) of
                     {'ok', PN} -> knm_phone_number:to_public_json(PN);
-                    {'error', _} -> kz_json:new()
+                    _ -> kz_json:new()
                 end,
     AuthU = kz_json:get_value(<<"auth_user">>, AuthOpts),
     AuthR = kz_json:find(<<"auth_realm">>, [AuthOpts, Acct]),

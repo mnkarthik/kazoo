@@ -177,8 +177,8 @@ maybe_edit(T0=#{'todo' := PNs}) ->
     _ = knm_phone_number:delete(knm_pipe:set_todo(T0, ToRemove)),
     knm_pipe:set_succeeded(T0, ToSave).
 
--spec maybe_edit_fold(knm_phone_number:phone_number(), {knm_phone_number:phone_numbers(), knm_phone_number:phone_numbers()}) ->
-          {knm_phone_number:phone_numbers(), knm_phone_number:phone_numbers()}.
+-spec maybe_edit_fold(knm_phone_number:record(), {knm_phone_number:records(), knm_phone_number:records()}) ->
+          {knm_phone_number:records(), knm_phone_number:records()}.
 maybe_edit_fold(PN, {ToRemove, ToSave}=To) ->
     case knm_phone_number:state(PN) of
         ?NUMBER_STATE_DELETED ->
@@ -190,16 +190,16 @@ maybe_edit_fold(PN, {ToRemove, ToSave}=To) ->
         _ -> To
     end.
 
--spec maybe_remove(knm_phone_number:phone_number(), knm_phone_number:phone_numbers(), integer()) ->
-          knm_phone_number:phone_numbers().
+-spec maybe_remove(knm_phone_number:record(), knm_phone_number:records(), integer()) ->
+          knm_phone_number:records().
 maybe_remove(PN, ToRemove, Expiry) ->
     case is_old_enough(PN, Expiry) of
         false -> ToRemove;
         true -> [PN|ToRemove]
     end.
 
--spec maybe_transition_aging(knm_phone_number:phone_number(), knm_phone_number:phone_numbers(), integer()) ->
-          knm_phone_number:phone_numbers().
+-spec maybe_transition_aging(knm_phone_number:record(), knm_phone_number:records(), integer()) ->
+          knm_phone_number:records().
 maybe_transition_aging(PN, ToSave, Expiry) ->
     case is_old_enough(PN, Expiry) of
         false -> ToSave;

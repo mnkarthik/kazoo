@@ -169,7 +169,7 @@ attempt_setting_e911_on_disallowed_number() ->
               ],
     Updates = [{fun knm_phone_number:reset_doc/2, JObj}],
     Num = ?BW_EXISTING_DID,
-    {ok, PN} = knm_number:get(Num),
+    {ok, PN} = knm_numbers:get(Num),
     Msg = kz_json:from_list(
             [{<<"code">>, 403}
             ,{<<"error">>, <<"forbidden">>}

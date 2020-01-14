@@ -268,7 +268,7 @@ validate_number_ownership_fold(Number, ReasonJObj, Unauthorized) ->
 -type assignments_to_apply() :: [assignment_to_apply()].
 -type port_req_assignment() :: {kz_term:ne_binary(), kz_term:api_binary(), kz_json:object()}.
 -type port_req_assignments() :: [port_req_assignment()].
--type assignment_update() :: {kz_term:ne_binary(), knm_number:return()} |
+-type assignment_update() :: {kz_term:ne_binary(), knm_numbers:return()} |
                              {kz_term:ne_binary(), {'ok', kz_json:object()}} |
                              {kz_term:ne_binary(), {'error', any()}}.
 -type assignment_updates() :: [assignment_update()].
@@ -362,7 +362,7 @@ log_assignment_updates(Updates) ->
     lists:foreach(fun log_assignment_update/1, Updates).
 
 -spec log_assignment_update(assignment_update()) -> 'ok'.
-log_assignment_update({DID, {'ok', _PN}}) ->
+log_assignment_update({DID, {'ok', _}}) ->
     lager:debug("successfully updated ~s", [DID]);
 log_assignment_update({DID, {'error', E}}) ->
     lager:debug("failed to update ~s: ~p", [DID, E]).
