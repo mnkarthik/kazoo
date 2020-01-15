@@ -173,18 +173,15 @@ create_number(Job, AccountId, AuthAccountId, CarrierModule, DID) ->
               ,{'module_name', CarrierModule}
               ],
     try knm_numbers:create(DID, Options) of
-        {'ok', PhoneNumber} ->
-            lager:debug("successfully created number ~s for account ~s"
-                       ,[knm_phone_number:number(PhoneNumber), AccountId]),
-            update_status(kz_json:set_value([?KEY_SUCCESS, knm_phone_number:number(PhoneNumber)]
-                                           ,knm_phone_number:to_public_json(PhoneNumber)
-                                           ,Job
-                                           )
-                         ,<<"running">>
-                         );
-        {Failure, JObj} ->
-            lager:debug("failed to create number ~s for account ~s: ~p ~p", [DID, AccountId, Failure, JObj]),
-            update_with_failure(Job, DID, JObj)
+        {'ok', [JObj]} ->
+            lager:debug("successfully created number ~s for account ~s", [kz_doc:id(JObj), AccountId]),
+            update_status(kz_json:set_value([?KEY_SUCCESS, kz_doc:id(JObj)], JObj, Job), <<"running">>);
+        {'ok', [], FailedProp} ->
+            lager:debug("failed to create number ~s for account ~s: ~p", [DID, AccountId, FailedProp]),
+            update_with_failure(Job, DID, FailedProp);
+        {'dry_run', _Quotes} ->
+            lager:debug("need charges accepted to create number ~s for account ~s", [DID, AccountId]),
+            update_with_failure(Job, DID, [{DID, 'accept_charges'}])
     catch
         ?STACKTRACE(E, _R, ST)
         kz_log:log_stacktrace(ST),
@@ -198,16 +195,16 @@ create_number(Job, AccountId, AuthAccountId, CarrierModule, DID) ->
                      )
         end.
 
--spec update_with_failure(kz_json:object(), kz_term:ne_binary(), kz_json:object() | atom()) ->
+-spec update_with_failure(kz_json:object(), kz_term:ne_binary(), knm_errors:proplist()) ->
           kz_json:object().
-update_with_failure(Job, Number, Reason) when is_atom(Reason) ->
+update_with_failure(Job, Number, [{_, Reason}|_]) when is_atom(Reason) ->
     update_status(kz_json:set_value([<<"errors">>, Number]
                                    ,kz_json:from_list([{<<"reason">>, kz_term:to_binary(Reason)}])
                                    ,Job
                                    )
                  ,<<"running">>
                  );
-update_with_failure(Job, Number, JObj) ->
+update_with_failure(Job, Number, [{_, JObj}|_]) ->
     case kz_json:get_values(JObj) of
         {[V], [K]} ->
             update_status(kz_json:set_value([<<"errors">>, Number]

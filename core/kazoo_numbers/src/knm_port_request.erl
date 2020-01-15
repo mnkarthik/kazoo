@@ -580,8 +580,8 @@ completed_port(PortReq) ->
 
 -spec completed_portin(kz_term:ne_binary(), kz_term:ne_binary(), transition_metadata()) -> 'ok' | {'error', any()}.
 completed_portin(Num, AccountId, #{optional_reason := OptionalReason}) ->
-    Options = [{auth_by, ?KNM_DEFAULT_AUTH_BY}
-              ,{assign_to, AccountId}
+    Options = [{'auth_by', ?KNM_DEFAULT_AUTH_BY}
+              ,{'assign_to', AccountId}
               ],
     Routins = [{fun knm_phone_number:set_state/2, ?NUMBER_STATE_IN_SERVICE}
               ,{fun knm_phone_number:set_ported_in/2, 'true'}
@@ -592,8 +592,8 @@ completed_portin(Num, AccountId, #{optional_reason := OptionalReason}) ->
     case knm_numbers:update(Num, Routins, Options) of
         {'ok', _} ->
             lager:debug("number ~s ported successfully", [Num]);
-        {'error', _Reason} ->
-            lager:debug("failed to transition number ~s: ~p", [Num, _Reason]),
+        _Else ->
+            lager:debug("failed to transition number ~s: ~p", [Num, _Else]),
             {'error', <<"transition_failed">>}
     end.
 

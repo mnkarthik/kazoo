@@ -473,7 +473,8 @@ list_all(_, Todo) ->
 
 -spec find(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 find(#{'auth_account_id' := AuthBy}, _IterValue, Args=#{<<"e164">> := Num}) ->
-    handle_result(Args, knm_numbers:get(Num, [{'auth_by', AuthBy}])).
+    %% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+    handle_result(Args, knm_ops:get(Num, [{'auth_by', AuthBy}])).
 
 -spec dump(kz_tasks:extra_args(), kz_tasks:iterator()) -> kz_tasks:iterator().
 dump(ExtraArgs, 'init') ->
@@ -568,7 +569,8 @@ import(#{'account_id' := Account
               ,{'public_fields', public_fields(Args)}
                | import_state(AuthAccountId, State)
               ],
-    Row = handle_result(Args, knm_numbers:create(E164, Options)),
+    %% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+    Row = handle_result(Args, knm_ops:create(E164, Options)),
     {Row, sets:add_element(AccountId, AccountIds)}.
 
 public_fields(Args) -> kz_json:from_list(lists:flatten(pub_fields(Args))).
@@ -680,7 +682,8 @@ assign_to(#{'auth_account_id' := AuthBy, 'account_id' := Account}
     Options = [{'auth_by', AuthBy}
               ,{'batch_run', 'true'}
               ],
-    handle_result(Args, knm_numbers:move(Num, AccountId, Options)).
+    %% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+    handle_result(Args, knm_ops:move(Num, AccountId, Options)).
 
 -spec update_merge(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 update_merge(#{'auth_account_id' := AuthBy}
@@ -691,7 +694,8 @@ update_merge(#{'auth_account_id' := AuthBy}
               ,{'batch_run', 'true'}
               ],
     Updates = [{fun knm_phone_number:update_doc/2, public_fields(Args)}],
-    handle_result(Args, knm_numbers:update(Num, Updates, Options)).
+    %% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+    handle_result(Args, knm_ops:update(Num, Updates, Options)).
 
 -spec update_overwrite(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 update_overwrite(#{'auth_account_id' := AuthBy}
@@ -702,7 +706,8 @@ update_overwrite(#{'auth_account_id' := AuthBy}
               ,{'batch_run', 'true'}
               ],
     Updates = [{fun knm_phone_number:reset_doc/2, public_fields(Args)}],
-    handle_result(Args, knm_numbers:update(Num, Updates, Options)).
+    %% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+    handle_result(Args, knm_ops:update(Num, Updates, Options)).
 
 -spec release(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 release(#{'auth_account_id' := AuthBy}
@@ -712,7 +717,8 @@ release(#{'auth_account_id' := AuthBy}
     Options = [{'auth_by', AuthBy}
               ,{'batch_run', 'true'}
               ],
-    handle_result(Args, knm_numbers:release(Num, Options)).
+    %% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+    handle_result(Args, knm_ops:release(Num, Options)).
 
 -spec reserve(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 reserve(#{'auth_account_id' := AuthBy, 'account_id' := Account}
@@ -723,7 +729,8 @@ reserve(#{'auth_account_id' := AuthBy, 'account_id' := Account}
               ,{'batch_run', 'true'}
               ,{'assign_to', select_account_id(AccountId0, Account)}
               ],
-    handle_result(Args, knm_numbers:reserve(Num, Options)).
+    %% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+    handle_result(Args, knm_ops:reserve(Num, Options)).
 
 -spec delete(kz_tasks:extra_args(), kz_tasks:iterator(), kz_tasks:args()) -> kz_tasks:return().
 delete(#{'auth_account_id' := AuthBy}
@@ -733,7 +740,8 @@ delete(#{'auth_account_id' := AuthBy}
     Options = [{'auth_by', AuthBy}
               ,{'batch_run', 'true'}
               ],
-    handle_result(Args, knm_numbers:delete(Num, Options)).
+    %% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+    handle_result(Args, knm_ops:delete(Num, Options)).
 
 %%%=============================================================================
 %%% Internal functions
@@ -741,21 +749,21 @@ delete(#{'auth_account_id' := AuthBy}
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% FIXME: use knm_numbers, update list_number/1 to use kzd_phone_number
+%% TODO: kt_numbers is processing numbers one at a time
+%% refactor it to use use bulk operation
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_result(kz_tasks:args(), knm_numbers:return()) -> kz_tasks:return().
-handle_result(Args, {'ok', Collection}) ->
-    %% TODO: kt_numbers is processing numbers one at a time
-    %% refactor it to use use bulk operation
+-spec handle_result(kz_tasks:args(), knm_pipe:collection()) -> kz_tasks:return().
+handle_result(Args, Collection) ->
+    IsDryRun = knm_options:dry_run(knm_pipe:options()),
     case knm_pipe:succeeded(Collection) of
+        [_PN] when IsDryRun -> format_result(Args, <<"accept_charges">>);
         [PN] -> format_result(Args, PN);
-        _ -> format_error(knm_pipe:failed_to_proplist(Collection), Args)
-    end;
-handle_result(Args, {'dry_run', _Quotes}) ->
-    format_result(Args, <<"accept_charges">>).
+        _ -> format_error(knm_errors:failed_to_proplist(Collection), Args)
+    end.
 
-
--spec format_error(knm_pipe:failed_prop(), kz_tasks:args()) -> kz_csv:mapped_row().
+-spec format_error(knm_errors:proplist(), kz_tasks:args()) -> kz_csv:mapped_row().
 format_error([{_, Reason} | _], Args) when is_atom(Reason) ->
     format_result(Args, kz_term:to_binary(Reason));
 format_error([{_, KNMError} | _], Args) ->

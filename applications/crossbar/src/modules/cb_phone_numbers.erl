@@ -452,26 +452,20 @@ delete(Context, Number) ->
 
     CB = fun() -> ?MODULE:delete(cb_context:set_accepting_charges(Context), Number) end,
     case release_or_delete(Context, Number, Options) of
-        {'ok', Collection}=Result ->
-            maybe_deleted_successfully(Context, Result, CB, knm_pipe:all_succeeded(Collection));
+        {'ok', _}=OK ->
+            set_response(OK, Context, CB);
+        {'ok', [], Failed}=Result ->
+            [{_, Error}|_] = knm_errors:failed_to_proplist(Failed),
+            case kz_json:is_json_object(Error)
+                 andalso knm_errors:error(Error) == <<"invalid_state_transition">>
+                 andalso knm_errors:cause(Error) == <<"from available to released">>
+            of
+                'true' -> reply_number_not_found(Context);
+                'false' -> set_response(Result, Context, CB)
+            end;
         Else ->
             set_response(Else, Context, CB)
     end.
-
--spec maybe_deleted_successfully(cb_context:context(), term(), {'ok', knm_pipe:collection()}, boolean()) ->
-          cb_context:context().
-maybe_deleted_successfully(Context, Result, CB, 'true') ->
-    set_response(Result, Context, CB);
-maybe_deleted_successfully(Context, {'ok', Collection}=Result, CB, 'false') ->
-    [{_, Error}|_] = knm_pipe:failed_to_proplist(Collection),
-    case kz_json:is_json_object(Error)
-         andalso knm_errors:error(Error) == <<"invalid_state_transition">>
-         andalso knm_errors:cause(Error) == <<"from available to released">>
-    of
-        'true' -> reply_number_not_found(Context);
-        'false' -> set_response(Result, Context, CB)
-    end.
-
 
 %%%=============================================================================
 %%% Internal functions
@@ -484,9 +478,9 @@ maybe_deleted_successfully(Context, {'ok', Collection}=Result, CB, 'false') ->
 -spec summary(cb_context:context(), kz_term:ne_binary()) -> cb_context:context().
 summary(Context, Number) ->
     case knm_numbers:get(Number, [{'auth_by', cb_context:auth_account_id(Context)}]) of
-        {'ok', PN} ->
-            crossbar_util:response(knm_phone_number:to_public_json(PN), Context);
-        {'error', _JObj} ->
+        {'ok', [JObj]} ->
+            crossbar_util:response(JObj, Context);
+        _ ->
             maybe_find_port_number(Context, Number, should_include_ports(Context))
     end.
 
@@ -923,28 +917,30 @@ validate_delete(Context) ->
 -type cb() :: fun(() -> cb_context:context()).
 
 -spec set_response(knm_numbers:return(), cb_context:context(), cb()) -> cb_context:context().
-set_response({'ok', Collection}, Context, _) ->
-    case {knm_pipe:succeeded(Collection)
-         ,knm_pipe:failed(Collection)
-         }
-    of
-        %% FIXME: make Failed type opaque
-        {[PN], Failed} when map_size(Failed) =:= 0 ->
-            crossbar_util:response(knm_phone_number:to_public_json(PN), Context);
-        {[], Failed} when map_size(Failed) =:= 1 ->
-            set_error(Failed, Context);
-        _ ->
-            %% collection operation (multi numbers)
-            ResultJObj = knm_pipe:to_json(Collection),
-            crossbar_util:response(ResultJObj, Context)
-    end;
+set_response({'ok', [JObj]}, Context, _) ->
+    crossbar_util:response(JObj, Context);
+set_response({'ok', JObjs}, Context, _) ->
+    Resp = kz_json:from_list(
+             [{<<"success">>, JObjs}
+             ,{<<"error">>, []}
+             ]),
+    crossbar_util:response(Resp, Context);
+set_response({'ok', [], [Failed]}, Context, _) ->
+    set_error(Failed, Context);
+set_response({'ok', Successes, FailedProp}, Context, _) ->
+    %% collection operation (multi numbers)
+    Resp = kz_json:from_list(
+             [{<<"success">>, Successes}
+             ,{<<"error">>, kz_json:from_list(FailedProp)}
+             ]),
+    crossbar_util:response(Resp, Context);
 set_response({'dry_run', Quotes}, Context, CB) ->
     case kz_term:is_empty(Quotes) of
         'false' -> crossbar_util:response_402(Quotes, Context);
         'true' -> CB()
     end.
 
--spec set_error(knm_pipe:reason(), cb_context:context()) -> cb_context:context().
+-spec set_error(knm_errors:reason(), cb_context:context()) -> cb_context:context().
 set_error('not_found', Context) ->
     reply_number_not_found(Context);
 set_error(Data, Context) when is_atom(Data) ->

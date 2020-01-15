@@ -42,11 +42,6 @@
 -type success() :: knm_phone_number:record().
 -type succeeded() :: [success()].
 
--type reason() :: knm_errors:error() | atom().
--type reasons() :: [reason()].
--type failed() :: #{kz_term:ne_binary() => reason()}.
--type failed_prop() :: [{kz_term:ne_binary(), reason()}].
-
 -type set_failed() :: kz_term:ne_binary() |
                       kz_term:ne_binaries() |
                       knm_phone_number:record() |
@@ -56,7 +51,7 @@
 
 -type collection() :: collection(succeeded()).
 -type collection(Succeeded) :: collection(Succeeded, Succeeded).
--type collection(Succeeded, TODOs) :: #{'failed' => failed()
+-type collection(Succeeded, TODOs) :: #{'failed' => knm_errors:failed()
                                        ,'options' => knm_options:options()
                                        ,'quotes' => quotes() %% defined in knm_phone_number.hrl
                                        ,'succeeded' => Succeeded
@@ -67,14 +62,12 @@
 -type appliers() :: [applier()].
 -type setter_fun() :: {fun((collection(), Value) -> collection()), Value}.
 -type setter_funs() :: [setter_fun()
-                        | {fun((collection(), set_failed(), reason()) -> collection()), set_failed(), reason()}
+                        | {fun((collection(), set_failed(), knm_errors:reason()) -> collection()), set_failed(), knm_errors:reason()}
                        ].
 %% }}}
 
 -export_type([collection/0
-             ,failed/0, failed_prop/0
              ,quotes/0
-             ,reason/0, reasons/0
              ,success/0, succeeded/0
              ]).
 
@@ -86,13 +79,13 @@
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec failed(collection()) -> failed().
+-spec failed(collection()) -> knm_errors:failed().
 failed(#{'failed' := Failed}) -> Failed.
 
--spec set_failed(collection(), failed()) -> collection().
+-spec set_failed(collection(), knm_errors:failed()) -> collection().
 set_failed(Collection, Failed) -> Collection#{'failed' => Failed}.
 
--spec set_failed(collection(), set_failed(), reason()) -> collection().
+-spec set_failed(collection(), set_failed(), knm_errors:reason()) -> collection().
 set_failed(#{'failed' := FailedAcc}=Collection, <<Num/binary>>, Reason) ->
     lager:debug("number ~s error: ~p", [Num, Reason]),
     Collection#{'failed' => FailedAcc#{Num => Reason}};
@@ -190,7 +183,7 @@ new(Options, ToDos) -> new(Options, ToDos, []).
           collection(succeeded(), kz_term:ne_binaries()).
 new(Options, ToDos, FailedNums) -> new(Options, ToDos, FailedNums, 'not_reconcilable').
 
--spec new(knm_options:options(), kz_term:ne_binaries(), kz_term:ne_binaries(), reason()) ->
+-spec new(knm_options:options(), kz_term:ne_binaries(), kz_term:ne_binaries(), knm_errors:reason()) ->
           collection(succeeded(), kz_term:ne_binaries()).
 new(Options, ToDos, FailedNums, Reason) ->
     #{'failed' => maps:from_list([{Num, Reason} || Num <- FailedNums])
@@ -307,7 +300,7 @@ num_to_did(PhoneNumber) -> knm_phone_number:number(PhoneNumber).
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec failed_to_proplist(collection()) -> failed_prop().
+-spec failed_to_proplist(collection()) -> knm_errors:proplist().
 failed_to_proplist(#{'failed' := Failed}) ->
     maps:to_list(Failed).
 

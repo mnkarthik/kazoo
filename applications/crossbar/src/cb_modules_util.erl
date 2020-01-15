@@ -253,7 +253,7 @@ validate_number_ownership(Numbers, Context) ->
             cb_context:add_system_error(403, 'forbidden', Message, Context)
     end.
 
--spec validate_number_ownership_fold(kz_term:ne_binary(), knm_pipe:reason(), kz_term:ne_binaries()) ->
+-spec validate_number_ownership_fold(kz_term:ne_binary(), knm_errors:reason(), kz_term:ne_binaries()) ->
           kz_term:ne_binaries().
 validate_number_ownership_fold(_, Reason, Unauthorized) when is_atom(Reason) ->
     %% Ignoring atom reasons, i.e. 'not_found' or 'not_reconcilable'
@@ -346,11 +346,11 @@ format_assignment_succeeded(PhoneNumbers) ->
      || PN <- PhoneNumbers
     ].
 
--spec format_assignment_failure(knm_pipe:failed()) -> assignment_updates().
+-spec format_assignment_failure(knm_errors:failed()) -> assignment_updates().
 format_assignment_failure(Failed) ->
     maps:fold(fun format_assignment_failure_fold/3, [], Failed).
 
--spec format_assignment_failure_fold(kz_term:ne_binary(), knm_pipe:reason(), assignment_updates()) ->
+-spec format_assignment_failure_fold(kz_term:ne_binary(), knm_errors:reason(), assignment_updates()) ->
           assignment_updates().
 format_assignment_failure_fold(Number, Reason, Updates) when is_atom(Reason) ->
     [{Number, {'error', Reason}} | Updates];

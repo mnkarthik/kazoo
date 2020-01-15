@@ -45,8 +45,10 @@
                          {'error', lookup_error()}.
 
 -type number_thing() :: kz_term:ne_binary() | kz_term:ne_binaries().
+-type successes() :: [{kz_term:ne_binary(), kz_json:object()}].
 
--type return() :: {'ok', knm_pipe:collection()} |
+-type return() :: {'ok', successes()} |
+                  {'ok', successes(), knm_errors:proplist()} |
                   {'dry_run', knm_pipe:quotes()}.
 %% }}}
 
@@ -138,9 +140,9 @@ assign_to_app(Num, App) ->
 
 -spec assign_to_app(number_thing(), kz_term:api_ne_binary(), knm_options:options()) -> return().
 assign_to_app(Num, App, Options) when is_binary(Num) ->
-    handle_result(knm_opts:assign_to_app([Num], App, Options));
+    handle_result(knm_ops:assign_to_app([Num], App, Options));
 assign_to_app(Nums, App, Options) when is_list(Nums) ->
-    handle_result(knm_opts:assign_to_app(Nums, App, Options)).
+    handle_result(knm_ops:assign_to_app(Nums, App, Options)).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -257,11 +259,19 @@ free(<<Account/binary>>) ->
 %%------------------------------------------------------------------------------
 -spec handle_result(knm_pipe:collection()) -> return().
 handle_result(Collection) ->
-    case knm_options:dry_run(knm_pipe:options(Collection))
-        andalso kz_term:is_empty(knm_pipe:failed(Collection))
+    Successes = [{knm_phone_number:number(PN), knm_phone_number:to_public_json(PN)}
+                 || PN <- knm_pipe:succeeded(Collection)
+                ],
+    case {knm_options:dry_run(knm_pipe:options(Collection))
+         ,kz_term:is_empty(knm_pipe:failed(Collection))
+         }
     of
-        'true' -> {'dry_run', knm_pipe:quotes(Collection)};
-        'false' -> {'ok', Collection}
+        {'true', 'true'} ->
+            {'dry_run', knm_pipe:quotes(Collection)};
+        {'false', 'true'} ->
+            {'ok', Successes};
+        {_, 'false'} ->
+            {'ok', Successes, knm_errors:failed_to_proplist(knm_pipe:failed(Collection))}
     end.
 
 %%------------------------------------------------------------------------------
