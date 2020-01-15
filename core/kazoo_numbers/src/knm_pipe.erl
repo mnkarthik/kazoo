@@ -27,7 +27,9 @@
         ]).
 
 %% Utilities
--export([attempt/2
+-export([all_succeeded/1
+        ,attempt/2
+        ,failed_to_proplist/1
         ,new/2, new/3, new/4
         ,merge_okkos/1, merge_okkos/2
         ,setters/2
@@ -43,6 +45,7 @@
 -type reason() :: knm_errors:error() | atom().
 -type reasons() :: [reason()].
 -type failed() :: #{kz_term:ne_binary() => reason()}.
+-type failed_prop() :: [{kz_term:ne_binary(), reason()}].
 
 -type set_failed() :: kz_term:ne_binary() |
                       kz_term:ne_binaries() |
@@ -69,7 +72,7 @@
 %% }}}
 
 -export_type([collection/0
-             ,failed/0
+             ,failed/0, failed_prop/0
              ,quotes/0
              ,reason/0, reasons/0
              ,success/0, succeeded/0
@@ -297,5 +300,21 @@ attempt(Fun, Args) ->
 
 -spec num_to_did(kz_term:api_ne_binary() | knm_phone_number:record()) -> kz_term:api_ne_binary().
 num_to_did('undefined') -> 'undefined';
-num_to_did(?NE_BINARY = DID) -> DID;
+num_to_did(<<DID/binary>>) -> DID;
 num_to_did(PhoneNumber) -> knm_phone_number:number(PhoneNumber).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec failed_to_proplist(collection()) -> failed_prop().
+failed_to_proplist(#{'failed' := Failed}) ->
+    maps:to_list(Failed).
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec all_succeeded(collection()) -> boolean().
+all_succeeded(#{'failed' := Failed}) ->
+    kz_term:is_empty(Failed).

@@ -744,14 +744,21 @@ delete(#{'auth_account_id' := AuthBy}
 %% @end
 %%------------------------------------------------------------------------------
 -spec handle_result(kz_tasks:args(), knm_numbers:return()) -> kz_tasks:return().
-handle_result(Args, {'ok', PN}) ->
-    format_result(Args, PN);
+handle_result(Args, {'ok', Collection}) ->
+    %% TODO: kt_numbers is processing numbers one at a time
+    %% refactor it to use use bulk operation
+    case knm_pipe:succeeded(Collection) of
+        [PN] -> format_result(Args, PN);
+        _ -> format_error(knm_pipe:failed_to_proplist(Collection), Args)
+    end;
 handle_result(Args, {'dry_run', _Quotes}) ->
-    format_result(Args, <<"accept_charges">>);
-handle_result(Args, {'error', Reason})
-  when is_atom(Reason) ->
+    format_result(Args, <<"accept_charges">>).
+
+
+-spec format_error(knm_pipe:failed_prop(), kz_tasks:args()) -> kz_csv:mapped_row().
+format_error([{_, Reason} | _], Args) when is_atom(Reason) ->
     format_result(Args, kz_term:to_binary(Reason));
-handle_result(Args, {'error', KNMError}) ->
+format_error([{_, KNMError} | _], Args) ->
     Reason = case knm_errors:message(KNMError) of
                  'undefined' -> knm_errors:error(KNMError);
                  R -> R

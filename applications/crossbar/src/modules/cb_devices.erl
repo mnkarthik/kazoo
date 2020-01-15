@@ -955,14 +955,19 @@ add_mdn(MDN, Context) ->
                |knm_options:mdn_options()
               ],
     case knm_numbers:create(MDN, Options) of
-        {'error', _}=Error ->
-            _ = crossbar_doc:delete(Context),
-            cb_phone_numbers:set_response(Error, Context);
-        {'ok', _} ->
-            lager:debug("created new mdn ~s with public fields set to ~s"
-                       ,[MDN, kz_json:encode(PublicFields)]
-                       ),
-            Context
+        {'ok', Collection} ->
+            case knm_pipe:all_succeeded(Collection) of
+                'false' ->
+                    _ = crossbar_doc:delete(Context),
+                    cb_phone_numbers:set_response({'ok', Collection}, Context, fun kz_term:identity/1);
+                'true' ->
+                    lager:debug("created new mdn ~s with public fields set to ~s"
+                               ,[MDN, kz_json:encode(PublicFields)]
+                               ),
+                    Context
+            end;
+        Else ->
+            cb_phone_numbers:set_response(Else, Context, fun kz_term:identity/1)
     end.
 
 %%------------------------------------------------------------------------------

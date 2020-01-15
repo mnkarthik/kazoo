@@ -44,16 +44,15 @@
 -type lookup_return() :: {'ok', kz_term:ne_binary(), knm_options:extra_options()} |
                          {'error', lookup_error()}.
 
--type return() :: {'ok', knm_phone_number:record()} |
-                  {'error', knm_errors:error() | atom()} |
-                  {'dry_run', knm_pipe:quotes()}.
+-type number_thing() :: kz_term:ne_binary() | kz_term:ne_binaries().
 
--type returns() :: {'ok', knm_pipe:collection()} |
-                   {'dry_run', knm_pipe:quotes()}.
+-type return() :: {'ok', knm_pipe:collection()} |
+                  {'dry_run', knm_pipe:quotes()}.
 %% }}}
 
--export_type([return/0
-             ,returns/0
+-export_type([lookup_error/0
+             ,lookup_return/0
+             ,return/0
              ]).
 
 %%%=============================================================================
@@ -65,12 +64,11 @@
 %% modify ones.
 %% @end
 %%------------------------------------------------------------------------------
--spec create(kz_term:ne_binary(), knm_options:options()) -> return();
-            (kz_term:ne_binaries(), knm_options:options()) -> returns().
+-spec create(number_thing(), knm_options:options()) -> return().
 create(Num, Options) when is_binary(Num) ->
-    handle_single_result(knm_ops:create(Num, Options));
+    handle_result(knm_ops:create([Num], Options));
 create(Nums, Options) when is_list(Nums) ->
-    handle_multi_result(knm_ops:create(Nums, Options)).
+    handle_result(knm_ops:create(Nums, Options)).
 
 %%------------------------------------------------------------------------------
 %% @doc Remove number(s) from the system without doing any state checking.
@@ -78,43 +76,37 @@ create(Nums, Options) when is_list(Nums) ->
 %% Sounds too harsh for you? You are looking for release/1,2.
 %% @end
 %%------------------------------------------------------------------------------
--spec delete(kz_term:ne_binary(), knm_options:options()) -> return();
-            (kz_term:ne_binaries(), knm_options:options()) -> returns().
+-spec delete(number_thing(), knm_options:options()) -> return().
 delete(Num, Options) when is_binary(Num) ->
-    handle_single_result(knm_opts:delete(Num, Options));
+    handle_result(knm_opts:delete([Num], Options));
 delete(Nums, Options) when is_list(Nums) ->
-    handle_multi_result(knm_opts:delete(Nums, Options)).
+    handle_result(knm_opts:delete(Nums, Options)).
 
 %%------------------------------------------------------------------------------
 %% @doc Attempts to get a single or a list of numbers from DB.
 %% @end
 %%------------------------------------------------------------------------------
--spec get(kz_term:ne_binary()) -> return();
-         (kz_term:ne_binaries()) -> returns().
-get(Num) ->
-    get(Num, knm_options:default()).
+-spec get(number_thing()) -> return().
+get(Num) -> get(Num, knm_options:default()).
 
--spec get(kz_term:ne_binary(), knm_options:options()) -> return();
-         (kz_term:ne_binaries(), knm_options:options()) -> returns().
+-spec get(number_thing(), knm_options:options()) -> return().
 get(Num, Options) when is_binary(Num) ->
-    handle_single_result(knm_ops:get(Num, Options));
+    handle_result(knm_ops:get([Num], Options));
 get(Nums, Options) when is_list(Nums) ->
-    handle_multi_result(knm_ops:get(Nums, Options)).
+    handle_result(knm_ops:get(Nums, Options)).
 
 %%------------------------------------------------------------------------------
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec release(kz_term:ne_binary()) -> return();
-             (kz_term:ne_binaries()) -> returns().
+-spec release(number_thing()) -> return().
 release(Num) -> release(Num, knm_options:default()).
 
--spec release(kz_term:ne_binary(), knm_options:options()) -> return();
-             (kz_term:ne_binaries(), knm_options:options()) -> returns().
+-spec release(number_thing(), knm_options:options()) -> return().
 release(Num, Options) when is_binary(Num) ->
-    handle_single_result(knm_ops:release(Num, Options));
+    handle_result(knm_ops:release([Num], Options));
 release(Nums, Options) when is_list(Nums) ->
-    handle_multi_result(knm_ops:release(Nums, Options)).
+    handle_result(knm_ops:release(Nums, Options)).
 
 %%------------------------------------------------------------------------------
 %% @doc Attempts to update some phone_number fields.
@@ -122,17 +114,15 @@ release(Nums, Options) when is_list(Nums) ->
 %% <div class="notice">will always result in a phone_number save.</div>
 %% @end
 %%------------------------------------------------------------------------------
--spec update(kz_term:ne_binary(), knm_phone_number:set_functions()) -> return();
-            (kz_term:ne_binaries(), knm_phone_number:set_functions()) -> returns().
+-spec update(number_thing(), knm_phone_number:set_functions()) -> return().
 update(Num, Routines) ->
     update(Num, Routines, knm_options:default()).
 
--spec update(kz_term:ne_binary(), knm_phone_number:set_functions(), knm_options:options()) -> return();
-            (kz_term:ne_binaries(), knm_phone_number:set_functions(), knm_options:options()) -> returns().
+-spec update(number_thing(), knm_phone_number:set_functions(), knm_options:options()) -> return().
 update(Num, Routines, Options) when is_binary(Num) ->
-    handle_single_result(knm_ops:update(Num, Routines, Options));
+    handle_result(knm_ops:update([Num], Routines, Options));
 update(Nums, Routines, Options) when is_list(Nums) ->
-    handle_multi_result(knm_ops:update(Nums, Routines, Options)).
+    handle_result(knm_ops:update(Nums, Routines, Options)).
 
 %%%=============================================================================
 %%% Special CRUD operation functions
@@ -142,17 +132,15 @@ update(Nums, Routines, Options) when is_list(Nums) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec assign_to_app(kz_term:ne_binary(), kz_term:api_ne_binary()) -> return();
-                   (kz_term:ne_binaries(), kz_term:api_ne_binary()) -> returns().
+-spec assign_to_app(number_thing(), kz_term:api_ne_binary()) -> return().
 assign_to_app(Num, App) ->
     assign_to_app(Num, App, knm_options:default()).
 
--spec assign_to_app(kz_term:ne_binary(), kz_term:api_ne_binary(), knm_options:options()) -> return();
-                   (kz_term:ne_binaries(), kz_term:api_ne_binary(), knm_options:options()) -> returns().
+-spec assign_to_app(number_thing(), kz_term:api_ne_binary(), knm_options:options()) -> return().
 assign_to_app(Num, App, Options) when is_binary(Num) ->
-    handle_single_result(knm_opts:assign_to_app(Num, App, Options));
+    handle_result(knm_opts:assign_to_app([Num], App, Options));
 assign_to_app(Nums, App, Options) when is_list(Nums) ->
-    handle_multi_result(knm_opts:assign_to_app(Nums, App, Options)).
+    handle_result(knm_opts:assign_to_app(Nums, App, Options)).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -181,28 +169,25 @@ lookup_account(Num) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec move(kz_term:ne_binary(), kz_term:ne_binary()) -> return();
-          (kz_term:ne_binaries(), kz_term:ne_binary()) -> returns().
+-spec move(number_thing(), kz_term:ne_binary()) -> return().
 move(Num, MoveTo) ->
     move(Num, MoveTo, knm_options:default()).
 
--spec move(kz_term:ne_binary(), kz_term:ne_binary(), knm_options:options()) -> return();
-          (kz_term:ne_binaries(), kz_term:ne_binary(), knm_options:options()) -> returns().
+-spec move(number_thing(), kz_term:ne_binary(), knm_options:options()) -> return().
 move(Num, MoveTo, Options) when is_binary(Num) ->
-    handle_single_result(knm_ops:move(Num, MoveTo, Options));
+    handle_result(knm_ops:move([Num], MoveTo, Options));
 move(Nums, MoveTo, Options) when is_list(Nums) ->
-    handle_multi_result(knm_ops:move(Nums, MoveTo, Options)).
+    handle_result(knm_ops:move(Nums, MoveTo, Options)).
 
 %%------------------------------------------------------------------------------
 %% @doc Fetches then transitions existing number(s) to the reserved state.
 %% @end
 %%------------------------------------------------------------------------------
--spec reserve(kz_term:ne_binary(), knm_options:options()) -> return();
-             (kz_term:ne_binaries(), knm_options:options()) -> returns().
+-spec reserve(number_thing(), knm_options:options()) -> return().
 reserve(Num, Options) when is_binary(Num) ->
-    handle_single_result(knm_ops:reserve(Num, Options));
+    handle_result(knm_ops:reserve([Num], Options));
 reserve(Nums, Options) when is_list(Nums) ->
-    handle_multi_result(knm_ops:reserve(Nums, Options)).
+    handle_result(knm_ops:reserve(Nums, Options)).
 
 %%%=============================================================================
 %%% Other functions
@@ -240,7 +225,6 @@ account_listing(<<Account/binary>>) ->
 -spec emergency_enabled(kz_term:ne_binary()) -> kz_term:ne_binaries().
 emergency_enabled(<<Account/binary>>) ->
     [Num || {Num, JObj} <- account_listing(Account),
-            %% FIXME: what in the hell is this? shouldn't it get from pvt_features?
             Features <- [kz_json:get_list_value(<<"features">>, JObj, [])],
             lists:member(?FEATURE_E911, Features)
     ].
@@ -271,24 +255,11 @@ free(<<Account/binary>>) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec handle_single_result(knm_pipe:collection()) -> return().
-handle_single_result(Collection) ->
-    case {knm_options:dry_run(knm_pipe:options(Collection))
-         ,knm_pipe:succeeded(Collection)
-         }
+-spec handle_result(knm_pipe:collection()) -> return().
+handle_result(Collection) ->
+    case knm_options:dry_run(knm_pipe:options(Collection))
+        andalso kz_term:is_empty(knm_pipe:failed(Collection))
     of
-        {'true', [_PN]} ->
-            {'dry_run', knm_pipe:quotes(Collection)};
-        {'false', []} ->
-            Failed = knm_pipe:failed(Collection),
-            {'error', hd(maps:values(Failed))};
-        {'false', [PN]} ->
-            {'ok', PN}
-    end.
-
--spec handle_multi_result(knm_pipe:collection()) -> returns().
-handle_multi_result(Collection) ->
-    case knm_options:dry_run(knm_pipe:options(Collection)) of
         'true' -> {'dry_run', knm_pipe:quotes(Collection)};
         'false' -> {'ok', Collection}
     end.
