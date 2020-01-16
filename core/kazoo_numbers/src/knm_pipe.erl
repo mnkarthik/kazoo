@@ -265,16 +265,19 @@ to_json(#{'succeeded' := PNs, 'failed' := Failed}) ->
 
 %%------------------------------------------------------------------------------
 %% @doc
+%% FIXME: this is being used by knm_provders and knm_carriers modules. refactor
+%% all those modules (returning kz_either as oppose to throwing error) and
+%% get rid of this _thing_.
 %% @end
 %%------------------------------------------------------------------------------
--spec attempt(fun(), list()) ->
-          knm_numbers:return() |
-          'true'.
+-type attempt_fun() :: fun((knm_phone_number:record()) -> knm_phone_number:record()) |
+                       fun((knm_phone_number:record(), atom()) -> knm_phone_number:record()).
+
+-spec attempt(attempt_fun(), [knm_phone_number:record()] | [knm_phone_number:record() | atom()]) ->
+          {'ok', knm_phone_number:record()} |
+          {'error', knm_errors:error() | atom()}.
 attempt(Fun, Args) ->
     try apply(Fun, Args) of
-        {'ok', _}=OK -> OK;
-        {'error', _}=Error -> Error;
-        'true' -> 'true';
         Resp ->
             case knm_phone_number:is_phone_number(Resp) of
                 'true' -> {'ok', Resp};

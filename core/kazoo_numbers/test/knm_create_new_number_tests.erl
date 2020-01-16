@@ -343,17 +343,22 @@ load_existing_checks() ->
 
 existing_in_state(PN, 'false') ->
     State = kz_term:to_list(knm_phone_number:state(PN)),
-    Resp = knm_pipe:attempt(fun knm_lib:ensure_can_load_to_create/1, [PN]),
+    Collection = knm_lib:ensure_can_load_to_create(PN),
     [{lists:flatten(["Ensure number in ", State, " cannot be 'created'"])
-     ,?_assertMatch({'error', _}, Resp)
+     ,?_assert(kz_term:is_empty(knm_pipe:succeeded(Collection)))
      }
-     | check_error_response(Resp, 409, <<"number_exists">>, ?TEST_AVAILABLE_NUM)
+     | check_error_response(knm_pipe:failed(Collection), 409, <<"number_exists">>, ?TEST_AVAILABLE_NUM)
     ];
 
 existing_in_state(PN, 'true') ->
     State = kz_term:to_list(knm_phone_number:state(PN)),
     [{lists:flatten(["Ensure number in ", State, " can be 'created'"])
-     ,?_assert(knm_lib:ensure_can_load_to_create(PN))
+     ,?_assert(kz_term:is_not_empty(
+                 knm_pipe:succeeded(
+                   knm_lib:ensure_can_load_to_create(PN)
+                  )
+                )
+              )
      }
     ].
 
