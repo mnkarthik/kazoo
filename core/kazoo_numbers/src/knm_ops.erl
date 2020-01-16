@@ -45,7 +45,7 @@ get(Nums, Options) -> do_get(Nums, Options).
 -spec do_get(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 do_get(Nums, Options) ->
     {Yes, No} = knm_converters:are_reconcilable(Nums),
-    knm_pipe:do(fun knm_phone_number:fetch/1, knm_pipe:new(Options, Yes, No)).
+    knm_pipe:do(fun knm_phone_number:fetch_pipe/1, knm_pipe:new(Options, Yes, No)).
 
 -spec do_get_me(kz_term:ne_binaries(), knm_options:options()) -> knm_pipe:collection().
 do_get_me(Nums, Options) ->

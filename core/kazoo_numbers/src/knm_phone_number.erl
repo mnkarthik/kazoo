@@ -12,6 +12,7 @@
 -module(knm_phone_number).
 
 -export([fetch/1, fetch/2
+        ,fetch_pipe/1
         ,save/1
         ,delete/1
         ,new/1
@@ -190,84 +191,90 @@ from_number_with_options(DID, Options) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec fetch(kz_term:ne_binary() | knm_pipe:collection()) ->
-          return() |
-          knm_pipe:collection().
+-spec fetch(kz_term:ne_binary()) -> return().
 fetch(?NE_BINARY=Num) ->
-    fetch(Num, knm_options:default());
-%% FIXME: opaque
-fetch(T0=#{'todo' := Nums, 'options' := Options}) ->
-    Pairs = group_by(lists:usort(knm_converters:normalize(Nums)), fun group_number_by_db/2),
-    F = fun (NumberDb, NormalizedNums, T) ->
-                case fetch_in(NumberDb, NormalizedNums, Options) of
-                    {'error', R} ->
-                        lager:error("bulk read failed (~p): ~p", [R, NormalizedNums]),
-                        knm_pipe:set_failed(T, NormalizedNums, R);
-                    {'ok', JObjs} when is_list(JObjs) -> bulk_fetch(T, JObjs);
-                    {'ok', JObj} -> do_handle_fetch(T, JObj)
-                end
-        end,
-    maps:fold(F, T0, Pairs).
+    fetch(Num, knm_options:default()).
 
--spec fetch_in(kz_term:ne_binary(), kz_term:ne_binary() | kz_term:ne_binaries(), knm_options:options()) ->
-          {'ok', kz_json:objects()} |
+-spec fetch(kz_term:ne_binary(), knm_options:options()) -> return().
+fetch(Num=?NE_BINARY, Options) ->
+    NormalizedNum = knm_converters:normalize(Num),
+    NumberDb = knm_converters:to_db(NormalizedNum),
+    case do_fetch(NumberDb, NormalizedNum, Options) of
+        {'ok', JObj} -> handle_fetch(JObj, Options);
+        {'error', _R}=Error -> Error
+    end.
+
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec fetch_pipe(knm_pipe:collection()) -> knm_pipe:collection().
+fetch_pipe(Collection) ->
+    Pairs = group_by(lists:usort(knm_converters:normalize(knm_pipe:todo(Collection)))
+                    ,fun group_number_by_db/2
+                    ),
+    maps:fold(fun fetch_pipe/3, Collection, Pairs).
+
+-spec fetch_pipe(kz_term:ne_binary(), kz_term:ne_binaries(), knm_pipe:collection()) ->
+          knm_pipe:collection().
+fetch_pipe(NumberDb, NormalizedNums, Collection) ->
+    case maybe_bulk_fetch(NumberDb, NormalizedNums, knm_pipe:options(Collection)) of
+        {'error', Reason} ->
+            lager:error("bulk read failed (~p): ~p", [Reason, NormalizedNums]),
+            knm_pipe:set_failed(Collection, NormalizedNums, Reason);
+        {'ok', JObjs} when is_list(JObjs) ->
+            lists:foldl(fun handle_bulk_fetch/2, Collection, JObjs);
+        {'ok', JObj} ->
+            maybe_handle_fetch(Collection, JObj)
+    end.
+
+-spec maybe_bulk_fetch(kz_term:ne_binary(), kz_term:ne_binaries(), knm_options:options()) ->
+          {'ok', kz_json:objects() | kz_json:object()} |
           kazoo_data:data_error().
-fetch_in(NumberDb, [Num], Options) ->
-    fetch(NumberDb, Num, Options);
-fetch_in(NumberDb, Nums, Options) ->
+maybe_bulk_fetch(NumberDb, [Num], Options) ->
+    do_fetch(NumberDb, Num, Options);
+maybe_bulk_fetch(NumberDb, Nums, Options) ->
     case knm_options:batch_run(Options) of
         'true' -> kz_datamgr:open_docs(NumberDb, Nums);
         'false' -> kz_datamgr:open_cache_docs(NumberDb, Nums)
     end.
 
--spec bulk_fetch(knm_pipe:collection(), kz_json:objects()) -> knm_pipe:collection().
-bulk_fetch(T0, JObjs) ->
-    F = fun (JObj, T) ->
-                Num = kz_json:get_ne_value(<<"key">>, JObj),
-                case kz_json:get_ne_value(<<"doc">>, JObj) of
-                    'undefined' ->
-                        R = kz_json:get_ne_value(<<"error">>, JObj),
-                        lager:warning("failed reading ~s: ~p", [Num, R]),
-                        knm_pipe:set_failed(T, Num, kz_term:to_atom(R, 'true'));
-                    Doc ->
-                        do_handle_fetch(T, Doc)
-                end
-        end,
-    lists:foldl(F, T0, JObjs).
-
--spec do_handle_fetch(knm_pipe:collection(), kz_json:object()) -> knm_pipe:collection().
-%% FIXME: opaque
-do_handle_fetch(T=#{'options' := Options}, Doc) ->
-    case knm_pipe:attempt(fun handle_fetch/2, [Doc, Options]) of
-        {'ok', PN} -> knm_pipe:set_succeeded(T, PN);
-        {'error', R} -> knm_pipe:set_failed(T, kz_doc:id(Doc), R)
-    end.
-
--spec fetch(kz_term:ne_binary(), knm_options:options()) ->
-          return() |
-          knm_pipe:collection().
-fetch(Num=?NE_BINARY, Options) ->
-    NormalizedNum = knm_converters:normalize(Num),
-    NumberDb = knm_converters:to_db(NormalizedNum),
-    case fetch(NumberDb, NormalizedNum, Options) of
-        {'ok', JObj} -> handle_fetch(JObj, Options);
-        {'error', _R}=Error -> Error
-    end.
-
--spec fetch(kz_term:api_ne_binary(), kz_term:ne_binary(), knm_options:options()) ->
+-spec do_fetch(kz_term:api_ne_binary(), kz_term:ne_binary(), knm_options:options()) ->
           {'ok', kz_json:object()} |
-          {'error', any()}.
-fetch('undefined', _Normalized, _Options) ->
+          kazoo_data:data_error().
+do_fetch('undefined', _Normalized, _Options) ->
     lager:info("no database for number ~s", [_Normalized]),
     {'error', 'not_found'};
-fetch(NumberDb, NormalizedNum, Options) ->
+do_fetch(NumberDb, NormalizedNum, Options) ->
     case knm_options:batch_run(Options) of
         'true' -> kz_datamgr:open_doc(NumberDb, NormalizedNum);
         'false' -> kz_datamgr:open_cache_doc(NumberDb, NormalizedNum)
     end.
 
+-spec handle_bulk_fetch(kz_json:objects(), knm_pipe:collection()) -> knm_pipe:collection().
+handle_bulk_fetch(JObj, Collection) ->
+    Num = kz_json:get_ne_value(<<"key">>, JObj),
+    case kz_json:get_ne_value(<<"doc">>, JObj) of
+        'undefined' ->
+            R = kz_json:get_ne_value(<<"error">>, JObj),
+            lager:warning("failed reading ~s: ~p", [Num, R]),
+            knm_pipe:set_failed(Collection, Num, kz_term:to_atom(R, 'true'));
+        Doc ->
+            maybe_handle_fetch(Collection, Doc)
+    end.
+
+-spec maybe_handle_fetch(knm_pipe:collection(), kz_json:object()) -> knm_pipe:collection().
+maybe_handle_fetch(Collection, Doc) ->
+    case handle_fetch(Doc, knm_pipe:options(Collection)) of
+        {'ok', PN} ->
+            knm_pipe:set_succeeded(Collection, PN);
+        {'error', Reason} ->
+            knm_pipe:set_failed(Collection, kz_doc:id(Doc), knm_errors:to_json(Reason))
+    end.
+
 -spec handle_fetch(kz_json:object(), knm_options:options()) ->
-          {'ok', record()}.
+          {'ok', record()} |
+          {'error', 'unauthorized'}.
 handle_fetch(JObj, Options) ->
     PN = from_json_with_options(JObj, Options),
     case state(PN) =:= ?NUMBER_STATE_AVAILABLE
@@ -275,34 +282,8 @@ handle_fetch(JObj, Options) ->
         orelse is_reserved_from_parent(PN)
     of
         'true' -> {'ok', PN};
-        'false' -> knm_errors:unauthorized()
+        'false' -> {'error', 'unauthorized'}
     end.
-
-is_mdn_for_mdn_run(#knm_phone_number{auth_by = ?KNM_DEFAULT_AUTH_BY}, _) ->
-    lager:debug("mdn check disabled by auth_by"),
-    'true';
-is_mdn_for_mdn_run(PN, IsMDNRun) ->
-    IsMDN = ?CARRIER_MDN =:= module_name(PN),
-    IsMDN
-        andalso lager:debug("~s is an mdn", [number(PN)]),
-    xnor(IsMDNRun, IsMDN).
-
-xnor('false', 'false') -> 'true';
-xnor('false', 'true') -> 'false';
-xnor('true', 'false') -> 'false';
-xnor('true', 'true') -> 'true'.
-
-%% FIXME: opaque
-is_mdn_for_mdn_run(T0=#{'todo' := PNs, 'options' := Options}) ->
-    IsMDNRun = knm_options:mdn_run(Options),
-    Reason = error_unauthorized(),
-    F = fun (PN, T) ->
-                case is_mdn_for_mdn_run(PN, IsMDNRun) of
-                    'true' -> knm_pipe:set_succeeded(T, PN);
-                    'false' -> knm_pipe:set_failed(T, number(PN), Reason)
-                end
-        end,
-    lists:foldl(F, T0, PNs).
 
 %%------------------------------------------------------------------------------
 %% @doc
@@ -319,7 +300,33 @@ save(T0) ->
                           ]),
     knm_pipe:merge_okkos(Ta, Tb).
 
-%% FIXME: opaque
+%%------------------------------------------------------------------------------
+%% @doc
+%% @end
+%%------------------------------------------------------------------------------
+-spec is_mdn_for_mdn_run(record()) -> boolean().
+is_mdn_for_mdn_run(Collection0) ->
+    IsMDNRun = knm_options:mdn_run(knm_pipe:options(Collection0)),
+    Reason = error_unauthorized(),
+    F = fun (PN, Collection) ->
+                case is_mdn_for_mdn_run(PN, IsMDNRun) of
+                    'true' ->
+                        lager:debug("~s is an mdn", [number(PN)]),
+                        knm_pipe:set_succeeded(Collection, PN);
+                    'false' -> knm_pipe:set_failed(Collection, number(PN), Reason)
+                end
+        end,
+    lists:foldl(F, Collection0, knm_pipe:todo(Collection0)).
+
+-spec is_mdn_for_mdn_run(record(), boolean()) -> boolean().
+is_mdn_for_mdn_run(#knm_phone_number{auth_by = ?KNM_DEFAULT_AUTH_BY}, _) ->
+    lager:debug("mdn check disabled by auth_by"),
+    'true';
+is_mdn_for_mdn_run(PN, IsMDNRun) ->
+    IsMDN = ?CARRIER_MDN =:= module_name(PN),
+    kz_term:xnor(IsMDNRun, IsMDN).
+
+-spec take_not_to_save(knm_pipe:collection()) -> {knm_pipe:collection(), records()}.
 take_not_to_save(T0=#{'todo' := PNs, 'options' := Options}) ->
     case knm_options:dry_run(Options) of
         'true' ->

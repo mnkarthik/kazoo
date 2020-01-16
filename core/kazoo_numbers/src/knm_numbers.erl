@@ -80,9 +80,9 @@ create(Nums, Options) when is_list(Nums) ->
 %%------------------------------------------------------------------------------
 -spec delete(number_thing(), knm_options:options()) -> return().
 delete(Num, Options) when is_binary(Num) ->
-    handle_result(knm_opts:delete([Num], Options));
+    handle_result(knm_ops:delete([Num], Options));
 delete(Nums, Options) when is_list(Nums) ->
-    handle_result(knm_opts:delete(Nums, Options)).
+    handle_result(knm_ops:delete(Nums, Options)).
 
 %%------------------------------------------------------------------------------
 %% @doc Attempts to get a single or a list of numbers from DB.

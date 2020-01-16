@@ -756,7 +756,7 @@ delete(#{'auth_account_id' := AuthBy}
 %%------------------------------------------------------------------------------
 -spec handle_result(kz_tasks:args(), knm_pipe:collection()) -> kz_tasks:return().
 handle_result(Args, Collection) ->
-    IsDryRun = knm_options:dry_run(knm_pipe:options()),
+    IsDryRun = knm_options:dry_run(knm_pipe:options(Collection)),
     case knm_pipe:succeeded(Collection) of
         [_PN] when IsDryRun -> format_result(Args, <<"accept_charges">>);
         [PN] -> format_result(Args, PN);
