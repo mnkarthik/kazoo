@@ -304,7 +304,7 @@ save(T0) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec is_mdn_for_mdn_run(record()) -> boolean().
+-spec is_mdn_for_mdn_run(knm_pipe:collection()) -> knm_pipe:collection().
 is_mdn_for_mdn_run(Collection0) ->
     IsMDNRun = knm_options:mdn_run(knm_pipe:options(Collection0)),
     Reason = error_unauthorized(),

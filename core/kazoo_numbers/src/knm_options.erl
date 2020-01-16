@@ -91,9 +91,9 @@ default() ->
 %% @end
 %%------------------------------------------------------------------------------
 -spec is_defined(options(), fun() | {fun(), any()}) -> boolean().
-is_defined(Options, {Getter, Default}) when is_function(Getter, 2) ->
-    case Getter(Options) of
-        Default -> 'true';
+is_defined(Options, {Getter, ExpectedVal}) when is_function(Getter, 2) ->
+    case Getter(Options, ExpectedVal) of
+        ExpectedVal -> 'true';
         _ -> 'false'
     end;
 is_defined(Options, Getter) when is_function(Getter, 1) ->
