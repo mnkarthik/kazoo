@@ -962,7 +962,7 @@ add_mdn(MDN, Context) ->
             Context;
         Else ->
             _ = crossbar_doc:delete(Context),
-            cb_phone_numbers:set_response(Else, Context, fun kz_term:identity/1)
+            cb_phone_numbers:set_response(Else, Context, fun() -> Context end)
     end.
 
 %%------------------------------------------------------------------------------

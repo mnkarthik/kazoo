@@ -275,7 +275,7 @@ to_json(#{'succeeded' := PNs, 'failed' := Failed}) ->
 
 -spec attempt(attempt_fun(), [knm_phone_number:record()] | [knm_phone_number:record() | atom()]) ->
           {'ok', knm_phone_number:record()} |
-          {'error', knm_errors:error() | atom()}.
+          {'error', knm_errors:error()}.
 attempt(Fun, Args) ->
     try apply(Fun, Args) of
         Resp ->

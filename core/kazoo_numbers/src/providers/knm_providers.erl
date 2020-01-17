@@ -409,7 +409,6 @@ provider_module(Other, _) ->
 
 -spec do_exec(knm_pipe:collection(), exec_action()) -> knm_pipe:collection().
 do_exec(T0=#{'todo' := PNs}, Action) ->
-    %% FIXME: user try(safe?) monadic either pipe/loop/fold operation
     F = fun (PN, T) ->
                 case knm_pipe:attempt(fun exec/2, [PN, Action]) of
                     {'ok', NewPN} -> knm_pipe:set_succeeded(T, NewPN);

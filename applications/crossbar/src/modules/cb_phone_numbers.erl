@@ -452,10 +452,9 @@ delete(Context, Number) ->
 
     CB = fun() -> ?MODULE:delete(cb_context:set_accepting_charges(Context), Number) end,
     case release_or_delete(Context, Number, Options) of
-        {'ok', _}=OK ->
+        {'ok', [_]}=OK ->
             set_response(OK, Context, CB);
-        {'ok', [], Failed}=Result ->
-            [{_, Error}|_] = knm_errors:failed_to_proplist(Failed),
+        {'ok', [], [{_, Error}]}=Result ->
             case kz_json:is_json_object(Error)
                  andalso knm_errors:error(Error) == <<"invalid_state_transition">>
                  andalso knm_errors:cause(Error) == <<"from available to released">>
