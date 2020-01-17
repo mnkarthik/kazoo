@@ -456,8 +456,8 @@ delete(Context, Number) ->
             set_response(OK, Context, CB);
         {'ok', [], [{_, Error}]}=Result ->
             case kz_json:is_json_object(Error)
-                 andalso knm_errors:error(Error) == <<"invalid_state_transition">>
-                 andalso knm_errors:cause(Error) == <<"from available to released">>
+                andalso knm_errors:error(Error) == <<"invalid_state_transition">>
+                andalso knm_errors:cause(Error) == <<"from available to released">>
             of
                 'true' -> reply_number_not_found(Context);
                 'false' -> set_response(Result, Context, CB)

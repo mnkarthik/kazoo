@@ -452,14 +452,14 @@ validate_errors(JObj, [{V, F, L}|Vs], Tests) ->
 
 create_new_number() ->
     {"Ensure success when auth_by account is allowed to create numbers"
-     ,?_assertMatch({'ok',[{'state', ?NUMBER_STATE_IN_SERVICE}
-                          ,{'assign_to', ?RESELLER_ACCOUNT_ID}
-                          ,{'auth_by', ?RESELLER_ACCOUNT_ID}
-                          ]
-                    }
-                    ,knm_lib:ensure_can_create([{'assign_to', ?RESELLER_ACCOUNT_ID}
-                                                ,{'auth_by', ?RESELLER_ACCOUNT_ID}
-                                               ]
-                                              )
-                   )
+    ,?_assertMatch({'ok',[{'state', ?NUMBER_STATE_IN_SERVICE}
+                         ,{'assign_to', ?RESELLER_ACCOUNT_ID}
+                         ,{'auth_by', ?RESELLER_ACCOUNT_ID}
+                         ]
+                   }
+                  ,knm_lib:ensure_can_create([{'assign_to', ?RESELLER_ACCOUNT_ID}
+                                             ,{'auth_by', ?RESELLER_ACCOUNT_ID}
+                                             ]
+                                            )
+                  )
     }.
