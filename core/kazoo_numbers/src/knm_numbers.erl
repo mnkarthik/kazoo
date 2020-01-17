@@ -45,10 +45,9 @@
                          {'error', lookup_error()}.
 
 -type number_thing() :: kz_term:ne_binary() | kz_term:ne_binaries().
--type successes() :: [{kz_term:ne_binary(), kz_json:object()}].
 
--type return() :: {'ok', successes()} |
-                  {'ok', successes(), knm_errors:proplist()} |
+-type return() :: {'ok', kz_json:object()} |
+                  {'ok', kz_json:object(), knm_errors:proplist()} |
                   {'dry_run', knm_pipe:quotes()}.
 %% }}}
 

@@ -760,7 +760,7 @@ handle_result(Args, Collection) ->
     case knm_pipe:succeeded(Collection) of
         [_PN] when IsDryRun -> format_result(Args, <<"accept_charges">>);
         [PN] -> format_result(Args, PN);
-        _ -> format_error(knm_errors:failed_to_proplist(Collection), Args)
+        _ -> format_error(knm_pipe:failed_to_proplist(Collection), Args)
     end.
 
 -spec format_error(knm_errors:proplist(), kz_tasks:args()) -> kz_csv:mapped_row().

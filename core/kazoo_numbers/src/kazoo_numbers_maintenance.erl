@@ -1831,11 +1831,12 @@ fix_unassign_doc(DIDs) ->
                %% No caching + bulk doc writes
               ,{'batch_run', 'true'}
               ],
-    case knm_ops:update(DIDs, Setters, Options) of
-        %% FIXME: opaque
-        #{'failed' := Map} when map_size(Map) =:= 0 -> 'ok';
-        #{'failed' := Failed} ->
-            ?SUP_LOG_DEBUG("failed fixing ~b unassigned numbers.", [maps:size(Failed)])
+    case knm_numbers:update(DIDs, Setters, Options) of
+        {'ok', _} -> 'ok';
+        {'ok', _, Failed} ->
+            ?SUP_LOG_DEBUG("failed fixing ~b unassigned numbers.", [length(Failed)]);
+        {'dry_run', _} ->
+            ?SUP_LOG_DEBUG("hit dry_run when fixing ~b unassigned numbers.", [length(DIDs)])
     end.
 
 -spec generate_numbers(kz_term:ne_binary(), kz_term:ne_binary(), pos_integer(), non_neg_integer()) -> 'ok'.
@@ -1941,7 +1942,7 @@ edit_feature_permissions_on_number(Num, Fun, Feature) ->
         'false' -> invalid_feature(Feature);
         'true' ->
             Updates = [{Fun, Feature}],
-            Collection = knm_ops:update(Num ,Updates),
+            Collection = knm_ops:update([Num], Updates),
             case knm_pipe:succeeded(Collection) of
                 [] ->
                     [{_, Error}|_] = knm_pipe:failed_to_proplist(Collection),
@@ -1952,7 +1953,7 @@ edit_feature_permissions_on_number(Num, Fun, Feature) ->
 
 -spec feature_permissions_on_number(kz_term:ne_binary()) -> 'no_return'.
 feature_permissions_on_number(Num) ->
-    Collection = knm_ops:get(Num),
+    Collection = knm_ops:get([Num]),
     case knm_pipe:succeeded(Collection) of
         [] ->
             [{_, Error}|_] = knm_pipe:failed_to_proplist(Collection),
