@@ -74,7 +74,8 @@ force_outbound() ->
     Options = [{'auth_by', ?RESELLER_ACCOUNT_ID}
               ,{'assign_to', ?RESELLER_ACCOUNT_ID}
               ],
-    {ok, PN1} = knm_numbers:create(?TEST_TELNYX_NUM, Options),
+    [PN1] = knm_pipe:succeeded(knm_ops:create([?TEST_TELNYX_NUM], Options)),
+
     [PN2] = knm_pipe:succeeded(knm_ops:update([PN1], [{fun knm_phone_number:reset_doc/2, ?J('true')}])),
     [PN3] = knm_pipe:succeeded(knm_ops:update([PN1], [{fun knm_phone_number:update_doc/2, ?J(<<"blabla">>)}])),
     [PN4] = knm_pipe:succeeded(knm_ops:update([PN2], [{fun knm_phone_number:reset_doc/2, ?J('undefined')}])),
@@ -151,7 +152,7 @@ is_dirty(PN) ->
     knm_phone_number:is_dirty(PN).
 
 is_feature_available(Num, Options) ->
-    {'ok', PN} = knm_numbers:get(Num, Options),
+    [PN] = knm_pipe:succeeded(knm_ops:get([Num], Options)),
     lists:member(?KEY, knm_providers:available_features(PN)).
 
 is_feature_set(PN) ->

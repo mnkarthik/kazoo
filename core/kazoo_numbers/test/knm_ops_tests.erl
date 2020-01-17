@@ -164,19 +164,19 @@ attempt_setting_e911_on_disallowed_number() ->
                  ])
               }
              ]),
-    Options = [{auth_by, ?RESELLER_ACCOUNT_ID}
-              ,{public_fields, JObj}
+    Options = [{'auth_by', ?RESELLER_ACCOUNT_ID}
+              ,{'public_fields', JObj}
               ],
     Updates = [{fun knm_phone_number:reset_doc/2, JObj}],
     Num = ?BW_EXISTING_DID,
-    {ok, PN} = knm_numbers:get(Num),
+    [PN] = knm_pipe:succeeded(knm_ops:get([Num])),
     Msg = kz_json:from_list(
             [{<<"code">>, 403}
             ,{<<"error">>, <<"forbidden">>}
             ,{<<"message">>, <<"requestor is unauthorized to perform operation">>}
             ]),
     [{"Verify feature is not set"
-     ,?_assertEqual(undefined, knm_phone_number:feature(PN, ?FEATURE_E911))
+     ,?_assertEqual('undefined', knm_phone_number:feature(PN, ?FEATURE_E911))
      }
     ,{"Verify feature is still not set"
      ,?_assertMatch(#{'failed' := #{Num := Msg}}, knm_ops:update([PN], Updates, Options))
