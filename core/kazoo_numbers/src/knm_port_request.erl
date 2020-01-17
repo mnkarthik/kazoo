@@ -153,8 +153,14 @@ are_porting(Numbers) ->
     ViewOptions = [{'keys', [Numbers]}],
     case kz_datamgr:get_results(?KZ_PORT_REQUESTS_DB, View, ViewOptions) of
         {'ok', JObjs} ->
-            Partition = fun(JObj) -> kz_term:is_empty(kz_json:get_ne_binary_value(<<"error">>, JObj)) end,
-            lists:partition(Partition, JObjs);
+            Fun = fun(JObj, {Porting, NotPorting}) ->
+                          Num = kz_json:get_value(<<"key">>, JObj),
+                          case kz_json:get_ne_value(<<"error">>, JObj) of
+                              'undefined' -> {[Num|Porting], NotPorting};
+                              _Error -> {Porting, [Num|NotPorting]}
+                          end
+                  end,
+            lists:foldl(Fun, {[], []}, JObjs);
         {'error', _E} ->
             lager:debug("failed to check if numbers are port_in: ~p", [_E]),
             {[], Numbers}

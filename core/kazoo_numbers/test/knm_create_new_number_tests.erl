@@ -353,7 +353,13 @@ load_existing_checks() ->
 existing_in_state(PN, 'false') ->
     ?DEV_LOG("here 13"),
     State = kz_term:to_list(knm_phone_number:state(PN)),
-    Collection = knm_lib:ensure_can_load_to_create(PN),
+    Col0 = #{'failed' => #{}
+            ,'options' => knm_options:default()
+            ,'quotes' => 'undefined'
+            ,'succeeded' => []
+            ,'todo' => [PN]
+            },
+    Collection = knm_lib:ensure_can_load_to_create(Col0),
     [{lists:flatten(["Ensure number in ", State, " cannot be 'created'"])
      ,?_assert(kz_term:is_empty(knm_pipe:succeeded(Collection)))
      }
@@ -362,13 +368,14 @@ existing_in_state(PN, 'false') ->
 
 existing_in_state(PN, 'true') ->
     State = kz_term:to_list(knm_phone_number:state(PN)),
+    Col0 = #{'failed' => #{}
+            ,'options' => knm_options:default()
+            ,'quotes' => 'undefined'
+            ,'succeeded' => []
+            ,'todo' => [PN]
+            },
     [{lists:flatten(["Ensure number in ", State, " can be 'created'"])
-     ,?_assert(kz_term:is_not_empty(
-                 knm_pipe:succeeded(
-                   knm_lib:ensure_can_load_to_create(PN)
-                  )
-                )
-              )
+     ,?_assertMatch([PN], knm_pipe:succeeded(knm_lib:ensure_can_load_to_create(Col0)))
      }
     ].
 
@@ -405,11 +412,8 @@ create_with_number_porting() ->
     Collection = knm_pipe:new([], []),
     Col1 = knm_lib:ensure_numbers_are_not_porting([?TEST_NEW_PORT_NUM], Collection),
     [{"Ensure number_is_porting when creating a port request number"
-     ,?_assert(maps:is_map(Col1)
-               andalso kz_term:is_not_empty(Col1)
-              )
+     ,check_error_response(knm_pipe:failed_to_proplist(Col1), 400, <<"number_is_porting">>, ?TEST_NEW_PORT_NUM)
      }
-     | check_error_response(Col1, 400, <<"number_is_porting">>, ?TEST_NEW_PORT_NUM)
     ].
 
 check_error_response(E, Code, Error) ->
@@ -419,9 +423,13 @@ check_error_response(E, Code, Error, Cause) ->
     check_error_response(E, Code, Error, Cause, 'undefined').
 
 check_error_response(#{}=E, Code, Error, Cause, Message) ->
-    [{_, JObj}|_] = maps:to_list(E),
+    [{_, JObj}] = maps:to_list(E),
     check_error_response({'error', JObj}, Code, Error, Cause, Message);
 check_error_response({'ok', [], [{_Num, JObj}]}, Code, Error, Cause, Message) ->
+    check_error_response({'error', JObj}, Code, Error, Cause, Message);
+check_error_response([{_Num, JObj}], Code, Error, Cause, Message) ->
+    check_error_response({'error', JObj}, Code, Error, Cause, Message);
+check_error_response({'error', JObj}, Code, Error, Cause, Message) ->
     validate_errors(JObj
                    ,[{Code, fun knm_errors:code/1, "Verify 'code' is set properly"}
                     ,{Error, fun knm_errors:error/1, "Verify 'error' is set properly"}
@@ -444,5 +452,14 @@ validate_errors(JObj, [{V, F, L}|Vs], Tests) ->
 
 create_new_number() ->
     {"Ensure success when auth_by account is allowed to create numbers"
-    ,?_assert(knm_lib:ensure_can_create([{'auth_by', ?RESELLER_ACCOUNT_ID}]))
+     ,?_assertMatch({'ok',[{'state', ?NUMBER_STATE_IN_SERVICE}
+                          ,{'assign_to', ?RESELLER_ACCOUNT_ID}
+                          ,{'auth_by', ?RESELLER_ACCOUNT_ID}
+                          ]
+                    }
+                    ,knm_lib:ensure_can_create([{'assign_to', ?RESELLER_ACCOUNT_ID}
+                                                ,{'auth_by', ?RESELLER_ACCOUNT_ID}
+                                               ]
+                                              )
+                   )
     }.

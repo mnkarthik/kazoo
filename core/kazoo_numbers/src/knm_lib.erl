@@ -73,7 +73,7 @@ ensure_account_can_create(Options, ?MATCH_ACCOUNT_RAW(AccountId)) ->
     case knm_options:ported_in(Options)
         orelse knm_options:state(Options) =:= ?NUMBER_STATE_PORT_IN
         orelse allow_number_additions(Options, AccountId)
-        orelse kzd_accounts:is_superduper_admin(AccountId)
+        orelse knm_phone_number:is_admin(AccountId)
     of
         'true' ->
             {'ok', Options};
@@ -142,7 +142,7 @@ ensure_load_create_state(PN, Collection) ->
             knm_pipe:add_success(Collection, Updated);
         'false' ->
             Num = knm_phone_number:number(PN),
-            lager:error("number ~s is wrong state ~s for creating", [Num, State]),
+            lager:error("number '~s' is in wrong state '~s' for creating", [Num, State]),
             knm_pipe:set_failed(Collection, Num, knm_errors:to_json('number_exists', Num))
     end.
 
@@ -191,7 +191,7 @@ allowed_creation_states(AuthBy) ->
 -spec allowed_creation_states(knm_options:options(), kz_term:api_ne_binary()) -> kz_term:ne_binaries().
 allowed_creation_states(_, 'undefined') -> [];
 allowed_creation_states(Options, AuthBy) ->
-    case {kzd_accounts:is_superduper_admin(AuthBy)
+    case {knm_phone_number:is_admin(AuthBy)
          ,allow_number_additions(Options, AuthBy)
          }
     of

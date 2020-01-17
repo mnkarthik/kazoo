@@ -84,7 +84,7 @@ get_unreconcilable_number() ->
     ].
 
 get_not_found() ->
-    [?_assertEqual({'ok', [], [{'error', 'not_found'}]}, knm_numbers:get(<<"4156301234">>))
+    [?_assertEqual({'ok', [], [{<<"+14156301234">>, 'not_found'}]}, knm_numbers:get(<<"4156301234">>))
     ].
 
 mdn_transitions() ->
@@ -126,12 +126,12 @@ is_mdn_for_mdn_run() ->
      ,?_assertMatch({'ok', [_JObj]}, knm_numbers:update(?TEST_IN_SERVICE_MDN, Fs, [Run|Base]))
      }
     ,{"Verify an mdn_run && !knm_mdn number cannot be updated"
-     ,?_assertMatch({'ok', [], [{?TEST_IN_SERVICE_MDN, _Error}]}
+     ,?_assertMatch({'ok', [], [{?TEST_IN_SERVICE_NUM, _Error}]}
                    ,knm_numbers:update(?TEST_IN_SERVICE_NUM, Fs, [Run|Base])
                    )
      }
     ,{"Verify a !mdn_run && knm_mdn number cannot be updated"
-     ,?_assertMatch({'ok', [], [{?TEST_IN_SERVICE_NUM, _Error}]}
+     ,?_assertMatch({'ok', [], [{?TEST_IN_SERVICE_MDN, _Error}]}
                    ,knm_numbers:update(?TEST_IN_SERVICE_MDN, Fs, Base)
                    )
      }
@@ -174,7 +174,7 @@ attempt_setting_e911_on_disallowed_local_number() ->
     %% FIXME: update these tests to work on knm_numbers successes jobjs
     [PN] = knm_pipe:succeeded(knm_ops:get([Num])),
 
-    [{Num, Error}] = knm_pipe:failed_to_proplist(knm_ops:update(PN, Updates, Options)),
+    [{Num, Error}] = knm_pipe:failed_to_proplist(knm_ops:update([PN], Updates, Options)),
 
     [{"Verify feature is not set"
      ,?_assertEqual('undefined', knm_phone_number:feature(PN, ?FEATURE_E911))
@@ -204,7 +204,7 @@ attempt_setting_e911_on_explicitly_disallowed_number() ->
 
     %% FIXME: update these tests to work on knm_numbers successes jobjs
     [PN] = knm_pipe:succeeded(knm_ops:get([Num])),
-    [{Num, ErrorJObj}] = knm_pipe:failed_to_proplist(knm_ops:update(PN, Updates, Options)),
+    [{Num, ErrorJObj}] = knm_pipe:failed_to_proplist(knm_ops:update([PN], Updates, Options)),
 
     [?_assertEqual('false', knm_phone_number:is_dirty(PN))
     ,{"Verify feature is not set"

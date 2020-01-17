@@ -150,7 +150,7 @@ move_available_local() ->
         ++ [].
 
 move_available_non_local() ->
-    PN0 = knm_pipe:succeeded(knm_ops:get([?TEST_AVAILABLE_NON_LOCAL_NUM])),
+    [PN0] = knm_pipe:succeeded(knm_ops:get([?TEST_AVAILABLE_NON_LOCAL_NUM])),
     [?_assert(not knm_phone_number:is_dirty(PN0))
     ,{"Verify number is available"
      ,?_assertEqual(?NUMBER_STATE_AVAILABLE, knm_phone_number:state(PN0))
