@@ -261,7 +261,7 @@ get_view_json(Path) ->
 %% @doc
 %% @end
 %%------------------------------------------------------------------------------
--spec is_account_id(kz_term:api_binary()) -> kz_term:api_binary().
+-spec is_account_id(kz_term:api_binary()) -> boolean().
 is_account_id(?MATCH_ACCOUNT_RAW(_)) -> 'true';
 is_account_id(_) -> 'false'.
 
