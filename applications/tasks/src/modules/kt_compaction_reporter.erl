@@ -34,6 +34,8 @@
         ,terminate/2
         ]).
 
+-include("kt_compactor.hrl"). %% ?COMPACT_AUTOMATICALLY
+
 -define(SERVER, ?MODULE).
 -define(COMPACTION_VIEW, <<"compaction_jobs/crossbar_listing">>).
 
@@ -74,12 +76,7 @@
 %%------------------------------------------------------------------------------
 -spec start_link() -> kz_types:startlink_ret().
 start_link() ->
-    case gen_server:start_link({'local', ?MODULE}, ?MODULE, [], []) of
-        {'error', {'already_started', Pid}} ->
-            'true' = link(Pid),
-            {'ok', Pid};
-        Other -> Other
-    end.
+    gen_server:start_link({'local', ?SERVER}, ?MODULE, [], []).
 
 %%------------------------------------------------------------------------------
 %% @doc Start tracking a compaction job
@@ -234,7 +231,14 @@ job_info(<<JobId/binary>>) ->
 %%------------------------------------------------------------------------------
 -spec init([]) -> {'ok', state()}.
 init([]) ->
-    {'ok', #{}}.
+    %% Only start this worker if compaction is enabled on this node.
+    case ?COMPACT_AUTOMATICALLY of
+        'true' ->
+            {'ok', #{}};
+        'false' ->
+            lager:info("compaction is disabled on this node. Not starting this worker."),
+            'ignore'
+    end.
 
 %%------------------------------------------------------------------------------
 %% @doc Handling call messages.
@@ -411,7 +415,7 @@ handle_info(_Info, State) ->
 -spec terminate(any(), state()) -> 'ok'.
 terminate(_Reason, _State) ->
     lager:debug("~s terminating with reason: ~p~n when state was: ~p"
-               ,[?MODULE, _Reason, _State]
+               ,[?SERVER, _Reason, _State]
                ).
 
 %%------------------------------------------------------------------------------

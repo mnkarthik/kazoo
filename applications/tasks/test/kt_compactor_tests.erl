@@ -41,6 +41,24 @@ sort_by_disk_size_test_() ->
      }
     ].
 
+build_compaction_callid_test_() ->
+    TestF = fun kt_compactor:build_compaction_callid/0,
+
+    {Year, Month, _} = erlang:date(),
+    YearBin = integer_to_binary(Year),
+    MonthBin = kz_binary:pad_left(integer_to_binary(Month), 2, <<"0">>),
+
+    [{"Prefix with YYYYMM-"
+     ,?_assertMatch(<<YearBin:4/binary, MonthBin:2/binary, "-", _:21/binary>>, TestF())
+     }
+    ,{"Prefix with YYYYMM-"
+     ,?_assertMatch(<<YearBin:4/binary, MonthBin:2/binary, "-", _:21/binary>>, TestF())
+     }
+    ,{"Return unique callid every time"
+     ,?_assertNotEqual(TestF(), TestF())
+     }
+    ].
+
 %% =======================================================================================
 %% Helpers
 %% =======================================================================================
