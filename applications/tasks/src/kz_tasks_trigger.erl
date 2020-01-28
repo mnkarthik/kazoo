@@ -65,7 +65,7 @@ status() ->
 %%------------------------------------------------------------------------------
 -spec start_link() -> kz_types:startlink_ret().
 start_link() ->
-    gen_server:start_link({'local', ?MODULE}, ?SERVER, [], []).
+    gen_server:start_link({'local', ?MODULE}, ?MODULE, [], []).
 
 %%%=============================================================================
 %%% gen_server callbacks

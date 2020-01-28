@@ -566,12 +566,12 @@ supid_to_callid(SupId) ->
 browse_dbs_for_triggers(Ref) ->
     CallId = build_compaction_callid(),
     kz_log:put_callid(CallId),
-    lager:debug("starting cleanup pass of databases"),
+    lager:info("starting cleanup pass of databases"),
     Dbs = maybe_list_and_sort_dbs_for_compaction(?COMPACT_AUTOMATICALLY, CallId),
     _Counter = lists:foldl(fun trigger_db_cleanup/2, {length(Dbs), 1}, Dbs),
     'ok' = kt_compaction_reporter:stop_tracking_job(CallId),
     kz_log:put_callid('undefined'), % Reset callid
-    lager:debug("pass completed for ~p", [Ref]),
+    lager:info("pass completed for ~p", [Ref]),
     gen_server:cast('kz_tasks_trigger', {'cleanup_finished', Ref}).
 
 -spec build_compaction_callid() -> kz_term:ne_binary().
