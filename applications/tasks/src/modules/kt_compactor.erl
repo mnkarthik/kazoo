@@ -596,7 +596,7 @@ trigger_db_cleanup(Db, {TotalDbs, Counter}) ->
     {TotalDbs, Counter + 1}.
 
 -spec maybe_list_and_sort_dbs_for_compaction(boolean(), kz_term:ne_binary()) ->
-    [kz_term:ne_binary()].
+          [kz_term:ne_binary()].
 maybe_list_and_sort_dbs_for_compaction('true', CallId) ->
     lager:debug("auto compaction enabled, getting databases list and sorting them by disk size"),
     Sorted = get_all_dbs_and_sort_by_disk(),

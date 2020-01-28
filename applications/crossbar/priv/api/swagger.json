@@ -36577,6 +36577,16 @@
                     "minimum": 1,
                     "type": "integer"
                 },
+                "compaction_list_dbs_chunk_size": {
+                    "default": 20,
+                    "description": "tasks compaction_list_dbs_chunk_size",
+                    "type": "integer"
+                },
+                "compaction_list_dbs_pause_ms": {
+                    "default": 200,
+                    "description": "tasks compaction_list_dbs_pause_ms",
+                    "type": "integer"
+                },
                 "crawler_delay_time_ms": {
                     "default": 60000,
                     "description": "tasks crawler delay time in milliseconds",
