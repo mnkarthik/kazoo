@@ -525,7 +525,7 @@ track_job(JobType, Fun, Args) ->
 
 -spec track_job(kz_term:ne_binary(), function(), [term()], dbs_and_sizes()) -> rows().
 track_job(JobType, Fun, Args, Dbs) when is_function(Fun)
-                                       andalso is_list(Args) ->
+                                        andalso is_list(Args) ->
     try
         CallId = build_compaction_callid(JobType),
         kz_log:put_callid(CallId),
